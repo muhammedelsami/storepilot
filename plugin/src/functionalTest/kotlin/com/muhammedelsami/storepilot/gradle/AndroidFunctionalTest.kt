@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 
 /**
  * Android application builds with the lowest supported and the newest AGP. The plugin comes from the
- * local test repository, next to AGP, as in a user's build. Skipped without an Android SDK.
+ * local test repository, next to AGP, as in a user's build. Skipped without an Android SDK, except on CI.
  */
 class AndroidFunctionalTest {
 
@@ -37,6 +37,8 @@ class AndroidFunctionalTest {
 
     private fun checkVariantTasks(agpVersion: String, gradleVersion: String, compileSdk: Int) {
         val sdk = androidSdk()
+        // CI runners have an SDK, so a missing one there is an error, not a reason to skip.
+        check(sdk != null || System.getenv("CI") == null) { "No Android SDK found on CI; set ANDROID_HOME." }
         assumeTrue(sdk != null, "No Android SDK found; set ANDROID_HOME to run this test.")
         writeProject(agpVersion, sdk!!, compileSdk)
 

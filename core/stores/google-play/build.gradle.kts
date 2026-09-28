@@ -2,7 +2,7 @@
 
 plugins {
     id("storepilot.embedded-kotlin")
-    id("storepilot.published")
+    id("storepilot.published-library")
 }
 
 dependencies {
