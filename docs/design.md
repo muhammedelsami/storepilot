@@ -60,7 +60,8 @@ Rules:
   is a new module, not a change to the plugin, CLI, or action.
 - Plugin, CLI, and action ship **with the same version number** from one tag. The version is set
   once in `gradle.properties`.
-- Every Kotlin/JVM module applies the `storepilot.kotlin-jvm` convention plugin from `build-logic/`.
+- Every Kotlin/JVM module applies a convention plugin from `build-logic/`: `storepilot.kotlin-jvm`, or
+  `storepilot.embedded-kotlin` for code that runs inside Gradle (§9, decision 3).
 
 ## 3. Shared concepts
 
@@ -72,6 +73,7 @@ These names mean the same thing in the DSL, the YAML file, the CLI flags, and th
 | **Artifact** | The file to upload: `.aab` (default) or `.apk`. |
 | **Track** | Where the release goes. Portable values `internal`, `testing`, `production`; any other value is passed to the store as-is (e.g. a custom Play closed-testing track name). |
 | **Rollout** | Fraction of users, `0.0 < rollout <= 1.0`. `1.0` = full release. |
+| **Release status** | `draft`, `inProgress`, `halted`, `completed`. Derived from the rollout when not set: below `1.0` is `inProgress`, `1.0` is `completed`. `inProgress` and `halted` need a rollout below `1.0`; `draft` and `completed` need `1.0`. |
 | **Release notes** | Per-locale "what's new" text for one release. |
 | **Listing** | Per-locale store page text + app-level details (contact email, website, default language). |
 | **Graphics** | Per-locale images, grouped by portable image type (§3.2). |
@@ -107,6 +109,9 @@ store/
 ```
 
 - A store-specific file wins over the default file for the same locale.
+- Release notes are `<locale>.txt` files. Line endings are normalized and surrounding whitespace is
+  removed. Hidden files are ignored; other file names are errors. A directory under `release-notes/`
+  that is not a known store ID gets a warning.
 - Screenshot order = file name sort order. Numbered names (`01.png`) are the convention.
 - A locale directory may hold only some files. Missing fields fall back to the default language
   **only if** `fallbackToDefaultLanguage = true`; otherwise the field is left unchanged in the store.
@@ -131,6 +136,9 @@ store/
 When a future store cannot do what the config asks (e.g. staged rollout, a graphic type), StorePilot
 **fails at validation** by default. `onUnsupported = warn` downgrades this to a warning and skips the
 option for that store only. For v1 (Google Play only) this path exists but is rarely hit.
+
+Some things are never skipped, whatever `onUnsupported` says: the artifact type, and a staged rollout.
+Skipping a staged rollout would turn it into a full release, which cannot be undone.
 
 ## 4. ASO support (v1 scope)
 
@@ -325,6 +333,21 @@ stores:
 ```
 
 Precedence (highest first): CLI flag / action input → environment variable → `storepilot.yml` → defaults.
+In the environment and in the file, a store-specific value wins over a top-level one. Relative paths in
+the file are resolved against the file's directory.
+
+| Setting | Top level (file / env) | Per store (file / env) | Default |
+|---|---|---|---|
+| Metadata directory | `metadataDir` / `STOREPILOT_METADATA_DIR` | — | `store` |
+| Track | `track` / `STOREPILOT_TRACK` | `track` / `STOREPILOT_<STORE_ID>_TRACK` | `internal` |
+| Rollout | `rollout` / `STOREPILOT_ROLLOUT` | `rollout` / `STOREPILOT_<STORE_ID>_ROLLOUT` | `1.0` |
+| Release status | — | `releaseStatus` / `STOREPILOT_<STORE_ID>_RELEASE_STATUS` | from rollout |
+| Package name | — | `packageName` / `STOREPILOT_<STORE_ID>_PACKAGE_NAME` | required |
+| Capability gaps | `onUnsupported` / `STOREPILOT_ON_UNSUPPORTED` | — | `fail` |
+
+Empty environment variables count as not set, because the action passes unset inputs as empty
+strings. Other keys under `stores.<id>` are store-specific options that the adapter checks (for Google
+Play: `inAppUpdatePriority`, `changesNotSentForReview`).
 
 ## 7. GitHub Action
 
@@ -413,11 +436,12 @@ Decided on 2026-09-28.
 3. **Minimum versions.** Gradle 8.10+, AGP 8.5+, JDK 17.
    - All modules compile to JVM 17 bytecode.
    - Code that runs inside Gradle uses the Kotlin stdlib that Gradle embeds (Kotlin 1.9.24 in
-     Gradle 8.10). The `plugin` module is therefore compiled with Kotlin API version 1.9, and its
-     functional tests run against Gradle 8.10 and the current Gradle in CI.
-   - Before the plugin loads `core` and its libraries (YAML parser, Google API client), decide how
-     they run: in a Gradle worker with classloader or process isolation, or compiled with the same
-     API version limit. Decide this in milestone 5.
+     Gradle 8.10). The `plugin` module and everything it loads (`core:*`, store adapters) apply the
+     `storepilot.embedded-kotlin` convention: Kotlin API version 1.9, language version 2.0. The
+     plugin's functional tests run against Gradle 8.10 and the current Gradle in CI.
+   - For the same reason, these modules use Java libraries (for example `snakeyaml-engine` for
+     `storepilot.yml`) and no Kotlin libraries built for a newer stdlib. Running `core` in a Gradle
+     worker with process isolation stays possible if that becomes too limiting (milestone 5).
    - Still to check in milestone 5: the AGP 9 variant API.
 4. **Screenshots.** Upload-only in v1. Generation is in scope later (§4.2).
 5. **Machine translation.** In scope later (§4.1).
