@@ -1,0 +1,3 @@
+This app only exists to show StorePilot.
+
+Its listing lives in app/store/ and is checked by ./gradlew check.

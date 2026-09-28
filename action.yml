@@ -1,0 +1,99 @@
+name: StorePilot
+description: Publish Android releases and Google Play store listings from files in your repository.
+author: Muhammed Elşami
+branding:
+  icon: upload-cloud
+  color: green
+
+inputs:
+  command:
+    description: >-
+      What to do: publish, promote, halt, resume, listing-push, listing-diff, or listing-validate.
+    default: publish
+  artifact:
+    description: The .aab or .apk to upload (publish). A glob is allowed but must match exactly one file.
+  package-name:
+    description: Package name. Default, in this order, from storepilot.yml, then from the artifact.
+  store:
+    description: Store ID.
+    default: google-play
+  config:
+    description: Path of storepilot.yml. Default, storepilot.yml in the working directory if it exists.
+  metadata-dir:
+    description: Metadata directory. Default, store next to the config file.
+  track:
+    description: Track to release on (publish), the target track (promote), or the track with the rollout (halt, resume).
+  from-track:
+    description: Track that has the release to promote (promote).
+  rollout:
+    description: Fraction of users, above 0.0 and at most 1.0.
+  with-listing:
+    description: Also push the listing, in the same edit (publish).
+    default: "false"
+  text-only:
+    description: Push details and text, no graphics (listing-push).
+    default: "false"
+  dry-run:
+    description: Read from the store and show the changes, but commit nothing.
+    default: "false"
+  version:
+    description: >-
+      StorePilot CLI version to download. Default, the version this action release was made for.
+      From a branch, the action builds the CLI from source.
+  google-play-service-account-json:
+    description: >-
+      Content of a Google Play service account key. Not needed when google-github-actions/auth ran
+      earlier in the job (Application Default Credentials).
+
+outputs:
+  result:
+    description: The CLI's JSON result (storepilot ... --output json).
+    value: ${{ steps.run.outputs.result }}
+  listing-changed:
+    description: true or false, set by listing-diff.
+    value: ${{ steps.run.outputs.listing-changed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find the StorePilot CLI
+      id: cli
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/resolve-cli.sh"'
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+
+    - name: Cache the StorePilot CLI
+      if: steps.cli.outputs.version != 'source'
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.cli.outputs.dir }}
+        key: storepilot-cli-${{ steps.cli.outputs.version }}
+
+    - name: Install the StorePilot CLI
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/install-cli.sh"'
+      env:
+        STOREPILOT_CLI_VERSION: ${{ steps.cli.outputs.version }}
+        STOREPILOT_CLI_JAR: ${{ steps.cli.outputs.jar }}
+
+    - name: Run StorePilot
+      id: run
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/run.sh"'
+      env:
+        STOREPILOT_CLI_JAR: ${{ steps.cli.outputs.jar }}
+        INPUT_COMMAND: ${{ inputs.command }}
+        INPUT_ARTIFACT: ${{ inputs.artifact }}
+        INPUT_PACKAGE_NAME: ${{ inputs.package-name }}
+        INPUT_STORE: ${{ inputs.store }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_METADATA_DIR: ${{ inputs.metadata-dir }}
+        INPUT_TRACK: ${{ inputs.track }}
+        INPUT_FROM_TRACK: ${{ inputs.from-track }}
+        INPUT_ROLLOUT: ${{ inputs.rollout }}
+        INPUT_WITH_LISTING: ${{ inputs.with-listing }}
+        INPUT_TEXT_ONLY: ${{ inputs.text-only }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        # Credentials reach the CLI only through the environment, never as arguments.
+        STOREPILOT_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ inputs.google-play-service-account-json }}
