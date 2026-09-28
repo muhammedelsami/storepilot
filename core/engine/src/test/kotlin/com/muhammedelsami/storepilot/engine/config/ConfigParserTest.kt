@@ -50,6 +50,35 @@ class ConfigParserTest {
     }
 
     @Test
+    fun `reads the listing and aso sections`() {
+        val config = ConfigParser.parse(
+            """
+            version: 1
+            fallbackToDefaultLanguage: true
+            listing:
+              graphics: false
+              replaceScreenshots: false
+            aso:
+              disable: [title-in-short-description, empty-locale]
+              warningsAsErrors: true
+            """.trimIndent(),
+        )
+
+        assertEquals(true, config.fallbackToDefaultLanguage)
+        assertEquals(ListingConfig(graphics = false, replaceScreenshots = false), config.listing)
+        assertEquals(AsoConfig(listOf("title-in-short-description", "empty-locale"), warningsAsErrors = true), config.aso)
+    }
+
+    @Test
+    fun `rejects unknown lint rules`() {
+        assertProblem(
+            "storepilot.yml:3:13: error: Unknown lint rule 'no-emoji'. Rules: title-in-short-description, " +
+                "trailing-whitespace, empty-locale, mixed-orientation, image-alpha.",
+            "version: 1\naso:\n  disable: [no-emoji]\n",
+        )
+    }
+
+    @Test
     fun `version alone is enough`() {
         assertEquals(StorePilotConfig(), ConfigParser.parse("version: 1"))
     }

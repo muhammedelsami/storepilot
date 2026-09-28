@@ -1,17 +1,29 @@
 package com.muhammedelsami.storepilot.api.fake
 
+import com.muhammedelsami.storepilot.api.AppDetails
 import com.muhammedelsami.storepilot.api.Artifact
 import com.muhammedelsami.storepilot.api.ArtifactType
 import com.muhammedelsami.storepilot.api.Capability
+import com.muhammedelsami.storepilot.api.GraphicRule
+import com.muhammedelsami.storepilot.api.GraphicType
+import com.muhammedelsami.storepilot.api.ImageFormat
+import com.muhammedelsami.storepilot.api.ListingField
+import com.muhammedelsami.storepilot.api.ListingRules
+import com.muhammedelsami.storepilot.api.LocaleTag
 import com.muhammedelsami.storepilot.api.Problem
 import com.muhammedelsami.storepilot.api.Release
 import com.muhammedelsami.storepilot.api.ReleaseStatus
+import com.muhammedelsami.storepilot.api.RemoteImage
 import com.muhammedelsami.storepilot.api.StoreContext
 import com.muhammedelsami.storepilot.api.StoreEdit
 import com.muhammedelsami.storepilot.api.StoreException
 import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.StoreProvider
 import com.muhammedelsami.storepilot.api.Track
+import java.nio.file.Path
+import java.security.MessageDigest
+import java.util.HexFormat
+import kotlin.io.path.readBytes
 
 /**
  * In-memory store for tests. Track rules follow Google Play: a completed release replaces the track,
@@ -22,6 +34,7 @@ class FakeStoreProvider(
     override val capabilities: Set<Capability> = ALL_CAPABILITIES,
     /** Option keys that [validateOptions] accepts. */
     private val knownOptions: Set<String> = emptySet(),
+    override val listingRules: ListingRules = DEFAULT_RULES,
     val state: FakeStoreState = FakeStoreState(),
 ) : StoreProvider {
     /** For [java.util.ServiceLoader]. Kotlin generates no such constructor when a parameter is a value class. */
@@ -49,6 +62,21 @@ class FakeStoreProvider(
             Capability.HaltAndResume,
             Capability.Promote,
             Capability.ReleaseNotes,
+            Capability.Listing,
+        )
+
+        /** Play's text limits; every graphic type as PNG or JPEG, up to 8 images, sizes not checked. */
+        val DEFAULT_RULES = ListingRules(
+            textLimits = mapOf(
+                ListingField.TITLE to 30,
+                ListingField.SHORT_DESCRIPTION to 80,
+                ListingField.FULL_DESCRIPTION to 4000,
+                ListingField.VIDEO_URL to 1000,
+            ),
+            releaseNotesLimit = 500,
+            graphics = GraphicType.entries.associateWith { type ->
+                GraphicRule(formats = ImageFormat.entries.toSet(), maxCount = if (type.multiple) 8 else 1)
+            },
         )
     }
 }
@@ -67,12 +95,41 @@ class FakeStoreState {
     /** When set, [StoreEdit.commit] throws a [StoreException] with this message. */
     var commitFailure: String? = null
 
+    val details: MutableMap<String, AppDetails> = mutableMapOf()
+    val listings: MutableMap<String, MutableMap<LocaleTag, Map<ListingField, String>>> = mutableMapOf()
+    val images: MutableMap<String, MutableMap<Pair<LocaleTag, GraphicType>, List<RemoteImage>>> = mutableMapOf()
+
+    /** Content of every image ever added, by image ID. */
+    val imageContent: MutableMap<String, ByteArray> = mutableMapOf()
+    private var nextImageId = 1
+
     fun releases(packageName: String, track: Track): List<Release> = tracks[packageName]?.get(track).orEmpty()
+
+    fun images(packageName: String, locale: LocaleTag, type: GraphicType): List<RemoteImage> =
+        images[packageName]?.get(locale to type).orEmpty()
+
+    /** Adds a committed image, for test setup. */
+    fun addImage(packageName: String, locale: LocaleTag, type: GraphicType, content: ByteArray): RemoteImage {
+        val image = newImage(content)
+        val byType = images.getOrPut(packageName) { mutableMapOf() }
+        byType[locale to type] = byType[locale to type].orEmpty() + image
+        return image
+    }
+
+    internal fun newImage(content: ByteArray): RemoteImage {
+        val id = "image-${nextImageId++}"
+        imageContent[id] = content
+        val sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content))
+        return RemoteImage(id, sha256, "https://fake.test/$id")
+    }
 }
 
 private class FakeEdit(private val state: FakeStoreState, private val packageName: String) : StoreEdit {
     private val tracks = state.tracks[packageName].orEmpty().toMutableMap()
     private val uploads = mutableListOf<Artifact>()
+    private var details = state.details[packageName] ?: AppDetails()
+    private val listings = state.listings[packageName].orEmpty().toMutableMap()
+    private val images = state.images[packageName].orEmpty().toMutableMap()
     private var closed = false
 
     override fun releases(track: Track): List<Release> {
@@ -97,10 +154,61 @@ private class FakeEdit(private val state: FakeStoreState, private val packageNam
         }
     }
 
+    override fun details(): AppDetails {
+        checkOpen()
+        return details
+    }
+
+    override fun setDetails(details: AppDetails) {
+        checkOpen()
+        val current = this.details
+        this.details = AppDetails(
+            defaultLanguage = details.defaultLanguage ?: current.defaultLanguage,
+            contactEmail = details.contactEmail ?: current.contactEmail,
+            contactWebsite = details.contactWebsite ?: current.contactWebsite,
+            contactPhone = details.contactPhone ?: current.contactPhone,
+        )
+    }
+
+    override fun listings(): Map<LocaleTag, Map<ListingField, String>> {
+        checkOpen()
+        return listings.toMap()
+    }
+
+    override fun setListing(locale: LocaleTag, fields: Map<ListingField, String>) {
+        checkOpen()
+        listings[locale] = listings[locale].orEmpty() + fields
+    }
+
+    override fun images(locale: LocaleTag, type: GraphicType): List<RemoteImage> {
+        checkOpen()
+        return images[locale to type].orEmpty()
+    }
+
+    override fun deleteImages(locale: LocaleTag, type: GraphicType) {
+        checkOpen()
+        images.remove(locale to type)
+    }
+
+    override fun uploadImage(locale: LocaleTag, type: GraphicType, file: Path): RemoteImage {
+        checkOpen()
+        val image = state.newImage(file.readBytes())
+        images[locale to type] = images[locale to type].orEmpty() + image
+        return image
+    }
+
+    override fun downloadImage(image: RemoteImage): ByteArray {
+        checkOpen()
+        return state.imageContent.getValue(image.id)
+    }
+
     override fun commit() {
         checkOpen()
         closed = true
         state.commitFailure?.let { throw StoreException(it) }
+        state.details[packageName] = details
+        state.listings[packageName] = listings
+        state.images[packageName] = images
         state.tracks[packageName] = tracks
         state.uploads.getOrPut(packageName) { mutableListOf() } += uploads
         state.commits++

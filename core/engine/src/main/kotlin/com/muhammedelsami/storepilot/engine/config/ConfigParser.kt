@@ -6,13 +6,8 @@ import com.muhammedelsami.storepilot.api.Rollout
 import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.Track
 import com.muhammedelsami.storepilot.api.ValidationException
-import org.snakeyaml.engine.v2.api.LoadSettings
-import org.snakeyaml.engine.v2.api.lowlevel.Compose
-import org.snakeyaml.engine.v2.exceptions.YamlEngineException
-import org.snakeyaml.engine.v2.nodes.MappingNode
+import com.muhammedelsami.storepilot.engine.listing.LintRule
 import org.snakeyaml.engine.v2.nodes.Node
-import org.snakeyaml.engine.v2.nodes.ScalarNode
-import org.snakeyaml.engine.v2.nodes.Tag
 import java.nio.file.Path
 import kotlin.io.path.readText
 
@@ -25,52 +20,82 @@ object ConfigParser {
 
     /** [source] names the file in problem messages. */
     fun parse(text: String, source: String = FILE_NAME): StorePilotConfig {
-        val root = try {
-            Compose(LoadSettings.builder().setLabel(source).build()).composeString(text).orElse(null)
-        } catch (e: YamlEngineException) {
-            throw ValidationException(Problem.error("Not valid YAML: ${e.message}", source))
-        }
-        val reader = NodeReader(source)
-        val config = reader.readConfig(root)
+        val reader = ConfigReader(source)
+        val config = reader.readConfig(YamlReader.compose(text, source))
         if (reader.problems.isNotEmpty()) throw ValidationException(reader.problems)
         return config
     }
 }
 
-private class NodeReader(private val source: String) {
-    val problems = mutableListOf<Problem>()
-
+private class ConfigReader(source: String) : YamlReader(source) {
     fun readConfig(root: Node?): StorePilotConfig {
         if (root == null) {
-            problems += Problem.error("The file is empty. It needs at least 'version: ${ConfigParser.VERSION}'.", source)
+            problems += Problem.error(
+                "The file is empty. It needs at least 'version: ${ConfigParser.VERSION}'.",
+                source,
+            )
             return StorePilotConfig()
         }
-        var metadataDir: String? = null
-        var track: Track? = null
-        var rollout: Rollout? = null
-        var onUnsupported: OnUnsupported? = null
-        var stores: Map<StoreId, StoreConfig> = emptyMap()
+        var config = StorePilotConfig()
         var hasVersion = false
-        for (entry in entries(root, "The file") ?: return StorePilotConfig()) {
+        for (entry in entries(root, "The file") ?: return config) {
             val value = entry.value
-            when (entry.key) {
+            val key = entry.key
+            when (key) {
                 "version" -> {
                     hasVersion = true
-                    val version = scalar(value, "version")
+                    val version = scalar(value, key)
                     if (version != null && version != ConfigParser.VERSION) {
                         error(value, "Unsupported version '$version'. This StorePilot reads version ${ConfigParser.VERSION}.")
                     }
                 }
-                "metadataDir" -> metadataDir = scalar(value, entry.key)
-                "track" -> track = convert(value, entry.key, ::Track)
-                "rollout" -> rollout = convert(value, entry.key, ::parseRollout)
-                "onUnsupported" -> onUnsupported = convert(value, entry.key) { parseConfigEnum<OnUnsupported>(it) }
-                "stores" -> stores = readStores(value)
-                else -> error(entry.keyNode, "Unknown key '${entry.key}'.")
+                "metadataDir" -> config = config.copy(metadataDir = scalar(value, key))
+                "track" -> config = config.copy(track = convert(value, key, ::Track))
+                "rollout" -> config = config.copy(rollout = convert(value, key, ::parseRollout))
+                "onUnsupported" -> config = config.copy(onUnsupported = convert(value, key) { parseConfigEnum<OnUnsupported>(it) })
+                "fallbackToDefaultLanguage" -> config = config.copy(fallbackToDefaultLanguage = boolean(value, key))
+                "listing" -> config = config.copy(listing = readListing(value))
+                "aso" -> config = config.copy(aso = readAso(value))
+                "stores" -> config = config.copy(stores = readStores(value))
+                else -> error(entry.keyNode, "Unknown key '$key'.")
             }
         }
         if (!hasVersion) error(root, "Missing 'version: ${ConfigParser.VERSION}'.")
-        return StorePilotConfig(metadataDir, track, rollout, onUnsupported, stores)
+        return config
+    }
+
+    private fun readListing(node: Node): ListingConfig {
+        var listing = ListingConfig()
+        for (entry in entries(node, "'listing'") ?: return listing) {
+            val key = "listing.${entry.key}"
+            when (entry.key) {
+                "graphics" -> listing = listing.copy(graphics = boolean(entry.value, key))
+                "replaceScreenshots" -> listing = listing.copy(replaceScreenshots = boolean(entry.value, key))
+                else -> error(entry.keyNode, "Unknown key '$key'.")
+            }
+        }
+        return listing
+    }
+
+    private fun readAso(node: Node): AsoConfig {
+        var aso = AsoConfig()
+        for (entry in entries(node, "'aso'") ?: return aso) {
+            val key = "aso.${entry.key}"
+            when (entry.key) {
+                "disable" -> {
+                    val rules = scalarList(entry.value, key).orEmpty()
+                    for ((id, itemNode) in rules) {
+                        if (LintRule.entries.none { it.id == id }) {
+                            error(itemNode, "Unknown lint rule '$id'. Rules: ${LintRule.entries.joinToString { it.id }}.")
+                        }
+                    }
+                    aso = aso.copy(disable = rules.map { it.first })
+                }
+                "warningsAsErrors" -> aso = aso.copy(warningsAsErrors = boolean(entry.value, key))
+                else -> error(entry.keyNode, "Unknown key '$key'.")
+            }
+        }
+        return aso
     }
 
     private fun readStores(node: Node): Map<StoreId, StoreConfig> {
@@ -100,58 +125,5 @@ private class NodeReader(private val source: String) {
             }
         }
         return StoreConfig(packageName, track, rollout, releaseStatus, options)
-    }
-
-    private class Entry(val key: String, val keyNode: Node, val value: Node)
-
-    /** The entries of a mapping node, or null (with a problem) when [node] is not a mapping. */
-    private fun entries(node: Node, what: String): List<Entry>? {
-        if (node !is MappingNode) {
-            error(node, "$what must be a mapping of keys to values.")
-            return null
-        }
-        val seen = mutableSetOf<String>()
-        return node.value.mapNotNull { tuple ->
-            val keyNode = tuple.keyNode
-            val key = (keyNode as? ScalarNode)?.value
-            when {
-                key == null -> {
-                    error(keyNode, "Keys must be plain text.")
-                    null
-                }
-                !seen.add(key) -> {
-                    error(keyNode, "Duplicate key '$key'.")
-                    null
-                }
-                else -> Entry(key, keyNode, tuple.valueNode)
-            }
-        }
-    }
-
-    private fun scalar(node: Node, key: String): String? {
-        if (node !is ScalarNode) {
-            error(node, "'$key' must be a single value.")
-            return null
-        }
-        if (node.tag == Tag.NULL) {
-            error(node, "'$key' has no value.")
-            return null
-        }
-        return node.value
-    }
-
-    private fun <T> convert(node: Node, key: String, parse: (String) -> T): T? {
-        val value = scalar(node, key) ?: return null
-        return try {
-            parse(value)
-        } catch (e: IllegalArgumentException) {
-            error(node, "Invalid '$key': ${e.message}")
-            null
-        }
-    }
-
-    private fun error(node: Node, message: String) {
-        val location = node.startMark.map { "$source:${it.line + 1}:${it.column + 1}" }.orElse(source)
-        problems += Problem.error(message, location)
     }
 }

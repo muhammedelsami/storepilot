@@ -27,6 +27,20 @@ data class StoreSettings(
     val releaseStatus: ReleaseStatus?,
     val onUnsupported: OnUnsupported,
     val options: Map<String, String>,
+    val listing: ListingSettings = ListingSettings(),
+    val aso: AsoSettings = AsoSettings(),
+)
+
+data class ListingSettings(
+    val graphics: Boolean = true,
+    val replaceScreenshots: Boolean = true,
+    /** Missing text fields take the default language's text (docs/design.md §3.1). */
+    val fallbackToDefaultLanguage: Boolean = false,
+)
+
+data class AsoSettings(
+    val disabledRules: Set<String> = emptySet(),
+    val warningsAsErrors: Boolean = false,
 )
 
 /**
@@ -47,7 +61,11 @@ class SettingsResolver(
     /** Directory that relative paths in environment variables are resolved against. */
     private val workingDir: Path = Path.of("").toAbsolutePath(),
 ) {
-    fun resolve(store: StoreId): StoreSettings {
+    /**
+     * [requirePackageName] is false for operations without store calls, such as validating the
+     * listing; the package name is then empty when it is not set.
+     */
+    fun resolve(store: StoreId, requirePackageName: Boolean = true): StoreSettings {
         val problems = mutableListOf<Problem>()
         val storeConfig = config.stores[store] ?: StoreConfig()
         val prefix = store.envPrefix
@@ -86,25 +104,31 @@ class SettingsResolver(
             ?: config.onUnsupported
             ?: OnUnsupported.FAIL
 
-        if (packageName == null) {
+        if (packageName == null && requirePackageName) {
             problems += Problem.error(
                 "No package name for store '$store'. Set 'stores.$store.packageName' in ${ConfigParser.FILE_NAME} " +
                     "or ${prefix}PACKAGE_NAME.",
             )
-        } else if (!PACKAGE_NAME.matches(packageName)) {
+        } else if (packageName != null && !PACKAGE_NAME.matches(packageName)) {
             problems += Problem.error("'$packageName' is not a valid Android package name.", "stores.$store.packageName")
         }
         if (problems.isNotEmpty()) throw ValidationException(problems)
 
         return StoreSettings(
             store = store,
-            packageName = packageName!!,
+            packageName = packageName.orEmpty(),
             metadataDir = metadataDir.normalize(),
             track = track,
             rollout = rollout,
             releaseStatus = releaseStatus,
             onUnsupported = onUnsupported,
             options = storeConfig.options,
+            listing = ListingSettings(
+                graphics = config.listing.graphics ?: true,
+                replaceScreenshots = config.listing.replaceScreenshots ?: true,
+                fallbackToDefaultLanguage = config.fallbackToDefaultLanguage ?: false,
+            ),
+            aso = AsoSettings(config.aso.disable.toSet(), config.aso.warningsAsErrors ?: false),
         )
     }
 

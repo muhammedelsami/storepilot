@@ -1,10 +1,14 @@
 package com.muhammedelsami.storepilot.api
 
-/** A validation finding. [source] is the file, config key, or other place it refers to. */
+/**
+ * A validation finding. [source] is the file, config key, or other place it refers to. [rule] is the
+ * ID of the lint rule that found it, for warnings that can be turned off.
+ */
 data class Problem(
     val severity: Severity,
     val message: String,
     val source: String? = null,
+    val rule: String? = null,
 ) {
     enum class Severity { ERROR, WARNING }
 
@@ -12,12 +16,14 @@ data class Problem(
         get() = severity == Severity.ERROR
 
     override fun toString(): String =
-        (if (source != null) "$source: " else "") + severity.name.lowercase() + ": " + message
+        (if (source != null) "$source: " else "") + severity.name.lowercase() + ": " + message +
+            (if (rule != null) " [$rule]" else "")
 
     companion object {
         fun error(message: String, source: String? = null) = Problem(Severity.ERROR, message, source)
 
-        fun warning(message: String, source: String? = null) = Problem(Severity.WARNING, message, source)
+        fun warning(message: String, source: String? = null, rule: String? = null) =
+            Problem(Severity.WARNING, message, source, rule)
     }
 }
 

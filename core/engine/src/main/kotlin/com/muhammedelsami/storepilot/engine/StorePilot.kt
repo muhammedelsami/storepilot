@@ -17,11 +17,23 @@ import com.muhammedelsami.storepilot.api.ValidationException
 import com.muhammedelsami.storepilot.engine.config.OnUnsupported
 import com.muhammedelsami.storepilot.engine.config.StoreSettings
 import com.muhammedelsami.storepilot.engine.config.configName
+import com.muhammedelsami.storepilot.engine.listing.ListingDiff
+import com.muhammedelsami.storepilot.engine.listing.ListingDiffer
+import com.muhammedelsami.storepilot.engine.listing.ListingPuller
+import com.muhammedelsami.storepilot.engine.listing.ListingReader
+import com.muhammedelsami.storepilot.engine.listing.ListingValidation
+import com.muhammedelsami.storepilot.engine.listing.ListingValidator
+import com.muhammedelsami.storepilot.engine.listing.PreparedListing
+import com.muhammedelsami.storepilot.engine.listing.PullResult
 import com.muhammedelsami.storepilot.engine.metadata.ReleaseNotesReader
+import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
+/** The listing check of one store. */
+class ListingCheck(val store: StoreId, val validation: ListingValidation)
+
 /**
- * The release operations shared by the Gradle plugin, the CLI, and the action.
+ * The release and listing operations shared by the Gradle plugin, the CLI, and the action.
  *
  * Each operation first validates every target store without network calls and throws a
  * [ValidationException] if anything is wrong. Then it runs one edit per store, in order. An edit is
@@ -35,8 +47,16 @@ class StorePilot(
 ) {
     private val releaseNotes = ReleaseNotesReader(stores.ids)
 
-    /** Uploads [artifact] and puts it on each target's track with its rollout and release notes. */
-    fun publish(artifact: Artifact, targets: List<StoreSettings>, dryRun: Boolean = false): List<StoreResult> {
+    /**
+     * Uploads [artifact] and puts it on each target's track with its rollout and release notes. With
+     * [withListing], the listing is pushed in the same edit, so both are committed together or not at all.
+     */
+    fun publish(
+        artifact: Artifact,
+        targets: List<StoreSettings>,
+        dryRun: Boolean = false,
+        withListing: Boolean = false,
+    ): List<StoreResult> {
         val artifactProblems = if (artifact.path.isRegularFile()) {
             emptyList()
         } else {
@@ -54,17 +74,30 @@ class StorePilot(
                         result.notes
                     }
                 }
-                calls = calls@{ edit ->
+                val limit = provider.listingRules.releaseNotesLimit
+                for ((locale, text) in notes) {
+                    val length = text.codePointCount(0, text.length)
+                    if (limit != null && length > limit) {
+                        problems += Problem.error(
+                            "The $locale release notes have $length characters; ${provider.displayName} allows $limit.",
+                            settings.metadataDir.resolve("release-notes").toString(),
+                        )
+                    }
+                }
+                val listing = if (withListing) prepareListing(textOnly = false) else null
+                calls = { edit ->
                     val track = settings.track
                     val before = edit.releases(track)
-                    if (dryRun) {
+                    val release = if (dryRun) {
                         val after = Release(emptyList(), status, settings.rollout, notes)
-                        return@calls listOf(Change.ArtifactUpload(artifact, null), Change.ReleaseUpdate(track, before, after))
+                        listOf(Change.ArtifactUpload(artifact, null), Change.ReleaseUpdate(track, before, after))
+                    } else {
+                        val versionCode = edit.upload(artifact)
+                        val after = Release(listOf(versionCode), status, settings.rollout, notes)
+                        edit.setRelease(track, after)
+                        listOf(Change.ArtifactUpload(artifact, versionCode), Change.ReleaseUpdate(track, before, after))
                     }
-                    val versionCode = edit.upload(artifact)
-                    val after = Release(listOf(versionCode), status, settings.rollout, notes)
-                    edit.setRelease(track, after)
-                    listOf(Change.ArtifactUpload(artifact, versionCode), Change.ReleaseUpdate(track, before, after))
+                    release + listing?.let { pushListing(edit, it, dryRun) }.orEmpty()
                 }
             }
         }
@@ -98,6 +131,46 @@ class StorePilot(
             }
         }
         return execute(jobs, emptyList(), dryRun)
+    }
+
+    /** Checks each target's listing against its store's rules and the lint rules. No network calls. */
+    fun validateListing(targets: List<StoreSettings>): List<ListingCheck> =
+        targets.map { settings ->
+            val provider = stores[settings.store]
+            val validation = ListingValidator(provider.listingRules, provider.displayName, settings)
+                .validate(ListingReader.read(settings.metadataDir))
+            ListingCheck(settings.store, validation)
+        }
+
+    /**
+     * Makes the store listing equal to the repository: details, text, and (unless [textOnly]) graphics.
+     * Each result holds the full comparison in [StoreResult.listingDiff].
+     */
+    fun pushListing(targets: List<StoreSettings>, textOnly: Boolean = false, dryRun: Boolean = false): List<StoreResult> {
+        val jobs = targets.map { settings ->
+            Job(settings, stores[settings.store]).apply {
+                val listing = prepareListing(textOnly)
+                calls = { edit -> pushListing(edit, listing, dryRun) }
+            }
+        }
+        return execute(jobs, emptyList(), dryRun)
+    }
+
+    /** Compares the repository listing with the store. Only reads; the same as a dry run of [pushListing]. */
+    fun diffListing(targets: List<StoreSettings>): List<StoreResult> = pushListing(targets, dryRun = true)
+
+    /** Writes the store's listing into the metadata directory. Existing files need [overwrite]. */
+    fun pullListing(target: StoreSettings, overwrite: Boolean = false): PullResult {
+        val provider = stores[target.store]
+        if (Capability.Listing !in provider.capabilities) {
+            throw ValidationException(Problem.error("${provider.displayName} does not support store listings."))
+        }
+        val edit = provider.openEdit(context(target))
+        val result = discardOnFailure(edit) {
+            ListingPuller(edit, provider.listingRules).pull(target.store, target.metadataDir, overwrite)
+        }
+        edit.discard()
+        return result
     }
 
     /** Stops the staged rollout on [track]. */
@@ -140,17 +213,18 @@ class StorePilot(
 
     private fun run(job: Job, dryRun: Boolean): StoreResult {
         val settings = job.settings
-        val edit = job.provider.openEdit(
-            StoreContext(settings.packageName, settings.options, secrets(settings.store), logger),
-        )
+        val edit = job.provider.openEdit(context(settings))
         val changes = discardOnFailure(edit) { job.calls(edit) }
         if (dryRun) {
             edit.discard()
         } else {
             discardOnFailure(edit) { edit.commit() }
         }
-        return StoreResult(settings.store, settings.packageName, !dryRun, changes, job.problems)
+        return StoreResult(settings.store, settings.packageName, !dryRun, changes, job.problems, job.listingDiff)
     }
+
+    private fun context(settings: StoreSettings) =
+        StoreContext(settings.packageName, settings.options, secrets(settings.store), logger)
 
     private inline fun <T> discardOnFailure(edit: StoreEdit, block: () -> T): T =
         try {
@@ -168,6 +242,7 @@ class StorePilot(
     private class Job(val settings: StoreSettings, val provider: StoreProvider) {
         val source = "stores.${settings.store}"
         val problems = mutableListOf<Problem>()
+        var listingDiff: ListingDiff? = null
         /** The store calls. They only read when the operation is a dry run. */
         lateinit var calls: (StoreEdit) -> List<Change>
 
@@ -193,6 +268,25 @@ class StorePilot(
                 OnUnsupported.WARN -> Problem.warning("${provider.displayName} does not support $what, so they are skipped.", source)
             }
             return false
+        }
+
+        /** Reads and validates the listing. Its problems join the others. */
+        fun prepareListing(textOnly: Boolean): PreparedListing {
+            require(Capability.Listing, "store listings")
+            if (!settings.metadataDir.isDirectory()) {
+                problems += Problem.error("The metadata directory does not exist.", settings.metadataDir.toString())
+            }
+            val listingSettings = if (textOnly) settings.copy(listing = settings.listing.copy(graphics = false)) else settings
+            val validation = ListingValidator(provider.listingRules, provider.displayName, listingSettings)
+                .validate(ListingReader.read(settings.metadataDir))
+            problems += validation.problems
+            return validation.listing
+        }
+
+        fun pushListing(edit: StoreEdit, listing: PreparedListing, dryRun: Boolean): List<Change> {
+            val diff = ListingDiffer.diff(edit, listing, settings.listing.replaceScreenshots)
+            listingDiff = diff
+            return ListingDiffer.apply(edit, diff, dryRun)
         }
 
         /**

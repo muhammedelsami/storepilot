@@ -112,6 +112,11 @@ store/
 - Release notes are `<locale>.txt` files. Line endings are normalized and surrounding whitespace is
   removed. Hidden files are ignored; other file names are errors. A directory under `release-notes/`
   that is not a known store ID gets a warning.
+- Listing text files: line endings are normalized and line breaks at the end are removed; other
+  whitespace stays (the `trailing-whitespace` lint rule reports it). An empty file is ignored with a
+  warning. Unknown files are errors.
+- Single images (`icon`, `feature-graphic`, `tv-banner`) may be `.png`, `.jpg`, or `.jpeg`.
+  Screenshots are image files in their type's directory. The format is read from the file content.
 - Screenshot order = file name sort order. Numbered names (`01.png`) are the convention.
 - A locale directory may hold only some files. Missing fields fall back to the default language
   **only if** `fallbackToDefaultLanguage = true`; otherwise the field is left unchanged in the store.
@@ -142,8 +147,13 @@ store/
   targeting, in-app update priority) survive halt, resume, and promote.
 - `inAppUpdatePriority` is applied only to a release uploaded in the same edit, because Play does not
   allow changing it after the rollout started.
-- Release note languages are BCP-47 tags. Legacy codes that Play may return (`iw-IL`) are read as
-  their canonical form (`he-IL`).
+- Release note and listing languages are BCP-47 tags. Legacy codes that Play may return (`iw-IL`) are
+  read as their canonical form (`he-IL`); writes use the code Play sent.
+- Listings and app details are updated with the whole resource (read in the same edit, then changed),
+  because the Java client's default transport cannot send PATCH requests.
+- `listing pull` downloads images from Play's image URL with `=h16383` appended, which asks for the
+  full size (the plain URL serves a preview). This is not documented by Play. The engine compares the
+  download with Play's SHA-256 and warns when they differ.
 
 ### 3.4 Capability gaps
 
@@ -160,14 +170,58 @@ Everything here runs locally or with read-only store calls. Nothing is pushed.
 
 | Check | Output |
 |---|---|
-| **Text limits** | Error when a field is over the store limit. Play limits to encode (verify against current Play docs before implementation): title 30, short description 80, full description 4000, release notes 500 characters. |
-| **Graphic rules** | Error for wrong format, size, aspect ratio, or count per type. Exact Play rules to be taken from Play docs at implementation time. |
-| **Locale coverage** | Table: locale × field/graphic type, showing present / missing / fallback. |
-| **Remote diff** | Per field and image: unchanged / changed / added / removed, compared with the live listing. Text diffs shown inline; images compared by hash. |
-| **Lint (warnings)** | Title repeated in short description, trailing whitespace, empty locale directories, screenshots with mixed orientations in one type. The list stays small and each rule can be turned off. |
+| **Text limits** | Error when a field is over the store limit, counted in Unicode code points. |
+| **Graphic rules** | Error for wrong format, size, aspect ratio, file size, or count per type. |
+| **Locale coverage** | Table: locale × field (present / fallback / missing) and graphic type (image count). |
+| **Remote diff** | Per details field, text field, and image (by SHA-256): unchanged / changed / added / removed / remote only. |
+| **Lint (warnings)** | See the rule list below. Each rule can be turned off with `aso.disable`; `aso.warningsAsErrors` makes them errors. |
 
-`validate` runs text limits, graphic rules, and lint. `diff` adds the remote comparison.
-Both print a human table by default and JSON with `--output json`.
+`validate` runs text limits, graphic rules, and lint, without network. `diff` adds the remote
+comparison. Both print a human table by default and JSON with `--output json`.
+
+### Google Play rules
+
+From the Play Console Help pages, checked on 2026-09-28:
+
+| Item | Rule |
+|---|---|
+| Title | 30 characters |
+| Short description | 80 characters |
+| Full description | 4000 characters |
+| Release notes | 500 characters per language |
+| Video URL | One YouTube video; no playlist, channel, or extra parameters such as a start time |
+| Icon | PNG, 512 × 512 px, at most 1024 KB |
+| Feature graphic | PNG or JPEG, 1024 × 500 px |
+| TV banner | PNG or JPEG, 1280 × 720 px |
+| Screenshots | PNG or JPEG; sides 320 to 3840 px (tablets up to 7680 px); long side at most 2 × the short side; up to 8 per type; at least 2 for phones |
+| Wear OS screenshots | Square, at least 384 px, up to 8 |
+
+Play asks for screenshots and graphics "without alpha". StorePilot reports an alpha channel as the
+`image-alpha` warning, not as an error, because it is unclear whether Play rejects such files.
+
+### Lint rules
+
+| ID | Warns about |
+|---|---|
+| `title-in-short-description` | The short description contains the title. |
+| `trailing-whitespace` | A line of a text field ends with spaces or tabs. |
+| `empty-locale` | A locale directory without text or graphics. |
+| `mixed-orientation` | Portrait and landscape images in one screenshot type. |
+| `image-alpha` | An image with an alpha channel where the store asks for none. |
+
+### Push rules
+
+- Only what the repository has is pushed. A text field, locale, or graphic type that exists only in
+  the store is left alone (`remote only` in the diff). Nothing is deleted from the store except images
+  of a type that the repository also has, when `listing.replaceScreenshots` is true (the default).
+- With `replaceScreenshots: true`, the store's images of a type become the local images in file-name
+  order; a changed order replaces them too. With `false`, only images whose hash the store does not
+  have are added.
+- `--text-only` (or `listing.graphics: false`) pushes details and text only.
+- With `fallbackToDefaultLanguage: true`, a missing text field takes the text of the
+  `default-language` from `details.yml`. Graphics do not fall back.
+- `listing pull` writes `details.yml`, the text files, and the images (`01.png`, `02.jpg`, …). With
+  `--overwrite`, stale images of a pulled type are removed so the directory matches the store.
 
 ### 4.1 Machine translation (after the first release)
 
@@ -316,7 +370,7 @@ storepilot halt|resume --package com.example.app --track production
 
 storepilot listing push     [--text-only] [--dry-run]
 storepilot listing pull     [--overwrite]
-storepilot listing diff
+storepilot listing diff     [--exit-code]
 storepilot listing validate
 ```
 
@@ -326,7 +380,9 @@ storepilot listing validate
 - `promote --rollout` defaults to `1.0`. `halt` and `resume` need `--track`.
 - The package name comes from `--package`, the environment, or `storepilot.yml`. Reading it from the
   artifact is planned, at the latest with the action (milestone 6), whose example has no package name.
-- `--with-listing` arrives with the listing commands (milestone 4).
+- `publish --with-listing` pushes the listing in the same edit as the release.
+- `listing validate` needs no package name and no credentials. It exits with `1` when it finds errors.
+- `listing diff --output json` has a top-level `listingChanged` flag (used by the action).
 - Distributed as a fat JAR + launcher script on GitHub Releases; later Homebrew / SDKMAN.
 - `--output json` prints a machine-readable result (used by the action). Per store: `store`,
   `packageName`, `status` (`committed` or `dryRun`), `track`, `versionCodes`, `changes` (uploads and
@@ -345,6 +401,15 @@ version: 1
 metadataDir: store
 track: testing
 rollout: 0.2
+fallbackToDefaultLanguage: false
+
+listing:
+  graphics: true
+  replaceScreenshots: true
+
+aso:
+  disable: [title-in-short-description]
+  warningsAsErrors: false
 
 stores:
   google-play:
@@ -428,7 +493,7 @@ exactly what will change on the Play page.
 | Output | Notes |
 |---|---|
 | `result` | JSON from `--output json` (§6): per store `status`, `track`, `versionCodes`, `changes`. |
-| `listing-changed` | `true`/`false`, set by `listing-diff`. |
+| `listing-changed` | `true`/`false`, set by `listing-diff` from `listingChanged` in its JSON. |
 
 Behaviour:
 

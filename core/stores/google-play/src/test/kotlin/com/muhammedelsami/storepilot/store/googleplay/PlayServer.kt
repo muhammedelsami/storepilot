@@ -51,15 +51,25 @@ class PlayServer {
     }
 
     /** Answers the resumable upload of a bundle or APK with [versionCode]. */
-    fun onUpload(kind: String, versionCode: Long) {
-        routes += Route("POST", "/upload$APP_PATH/edits/$EDIT_ID/$kind", 200, "", mapOf("Location" to UPLOAD_URL))
-        routes += Route("PUT", URI(UPLOAD_URL).rawPath, 200, """{"versionCode": $versionCode}""", emptyMap())
+    fun onUpload(kind: String, versionCode: Long) = onMediaUpload("/edits/$EDIT_ID/$kind", """{"versionCode": $versionCode}""")
+
+    /** Answers a resumable media upload to [path] (relative to the app) with [json]. */
+    fun onMediaUpload(path: String, json: String) {
+        routes += Route("POST", "/upload$APP_PATH$path", 200, "", mapOf("Location" to UPLOAD_URL))
+        routes += Route("PUT", URI(UPLOAD_URL).rawPath, 200, json, emptyMap())
+    }
+
+    /** A route outside the Play API, by its raw path. */
+    fun onPath(method: String, rawPath: String, content: String) {
+        routes += Route(method, rawPath, 200, content, emptyMap())
     }
 
     fun onEditStart() = on("POST", "/edits", """{"id": "$EDIT_ID"}""")
 
     fun requests(method: String, path: String): List<Request> =
         requests.filter { it.method == method && it.path == APP_PATH + path }
+
+    fun uploads(): List<Request> = requests.filter { it.method == "POST" && it.path.startsWith("/upload") }
 
     companion object {
         const val PACKAGE_NAME = "com.example.app"

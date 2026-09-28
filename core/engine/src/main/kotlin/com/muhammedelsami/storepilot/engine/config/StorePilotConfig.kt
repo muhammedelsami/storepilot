@@ -12,7 +12,25 @@ data class StorePilotConfig(
     val track: Track? = null,
     val rollout: Rollout? = null,
     val onUnsupported: OnUnsupported? = null,
+    val fallbackToDefaultLanguage: Boolean? = null,
+    val listing: ListingConfig = ListingConfig(),
+    val aso: AsoConfig = AsoConfig(),
     val stores: Map<StoreId, StoreConfig> = emptyMap(),
+)
+
+/** The `listing:` section. */
+data class ListingConfig(
+    /** False pushes text only. */
+    val graphics: Boolean? = null,
+    /** True makes the remote images of a type equal to the local ones; false only adds new images. */
+    val replaceScreenshots: Boolean? = null,
+)
+
+/** The `aso:` section. */
+data class AsoConfig(
+    /** Lint rule IDs to turn off. */
+    val disable: List<String> = emptyList(),
+    val warningsAsErrors: Boolean? = null,
 )
 
 /** One entry under `stores:`. */

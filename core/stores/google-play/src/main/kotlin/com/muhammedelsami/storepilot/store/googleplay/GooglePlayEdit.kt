@@ -4,21 +4,29 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.FileContent
 import com.google.api.services.androidpublisher.AndroidPublisher
 import com.google.api.services.androidpublisher.model.AppEdit
+import com.google.api.services.androidpublisher.model.Listing
 import com.google.api.services.androidpublisher.model.LocalizedText
 import com.google.api.services.androidpublisher.model.TrackRelease
+import com.muhammedelsami.storepilot.api.AppDetails
 import com.muhammedelsami.storepilot.api.Artifact
 import com.muhammedelsami.storepilot.api.ArtifactType
+import com.muhammedelsami.storepilot.api.GraphicType
+import com.muhammedelsami.storepilot.api.ListingField
 import com.muhammedelsami.storepilot.api.LocaleTag
 import com.muhammedelsami.storepilot.api.Logger
 import com.muhammedelsami.storepilot.api.Release
 import com.muhammedelsami.storepilot.api.ReleaseStatus
+import com.muhammedelsami.storepilot.api.RemoteImage
 import com.muhammedelsami.storepilot.api.Rollout
 import com.muhammedelsami.storepilot.api.StoreEdit
 import com.muhammedelsami.storepilot.api.StoreException
 import com.muhammedelsami.storepilot.api.Track
 import java.io.IOException
+import java.nio.file.Path
 import java.util.Locale
+import kotlin.io.path.extension
 import kotlin.io.path.fileSize
+import com.google.api.services.androidpublisher.model.AppDetails as PlayAppDetails
 import com.google.api.services.androidpublisher.model.Track as PlayTrack
 
 /**
@@ -30,6 +38,7 @@ internal class GooglePlayEdit(
     private val packageName: String,
     private val options: PlayOptions,
     private val logger: Logger,
+    private val download: (url: String) -> ByteArray,
 ) : StoreEdit {
     private val edits = publisher.edits()
     private val editId: String = call("start an edit") { edits.insert(packageName, AppEdit()).execute().id }
@@ -39,6 +48,12 @@ internal class GooglePlayEdit(
 
     /** Version codes uploaded in this edit. */
     private val uploaded = mutableSetOf<Long>()
+
+    /** Play's own code for each language read in this edit, such as `iw-IL` for `he-IL`. */
+    private val playLanguages = mutableMapOf<LocaleTag, String>()
+
+    /** Play's listings as read in this edit, by language. Updates start from them. */
+    private var remoteListings: MutableMap<LocaleTag, Listing>? = null
 
     override fun releases(track: Track): List<Release> =
         playReleases(track)
@@ -82,6 +97,84 @@ internal class GooglePlayEdit(
         }
     }
 
+    override fun details(): AppDetails {
+        val details = playDetails()
+        return AppDetails(
+            defaultLanguage = details.defaultLanguage?.let(::locale),
+            contactEmail = details.contactEmail?.ifBlank { null },
+            contactWebsite = details.contactWebsite?.ifBlank { null },
+            contactPhone = details.contactPhone?.ifBlank { null },
+        )
+    }
+
+    // Updates send the whole resource: the Java client's default transport cannot send PATCH requests.
+    override fun setDetails(details: AppDetails) {
+        val update = playDetails().apply {
+            details.defaultLanguage?.let { defaultLanguage = playLanguage(it) }
+            details.contactEmail?.let { contactEmail = it }
+            details.contactWebsite?.let { contactWebsite = it }
+            details.contactPhone?.let { contactPhone = it }
+        }
+        call("update the app details") { edits.details().update(packageName, editId, update).execute() }
+    }
+
+    override fun listings(): Map<LocaleTag, Map<ListingField, String>> =
+        playListings().mapValues { (_, listing) ->
+            listOfNotNull(
+                listing.title?.let { ListingField.TITLE to it },
+                listing.shortDescription?.let { ListingField.SHORT_DESCRIPTION to it },
+                listing.fullDescription?.let { ListingField.FULL_DESCRIPTION to it },
+                listing.video?.let { ListingField.VIDEO_URL to it },
+            ).filter { it.second.isNotBlank() }.toMap()
+        }
+
+    override fun setListing(locale: LocaleTag, fields: Map<ListingField, String>) {
+        val listings = playListings()
+        val language = playLanguage(locale)
+        val listing = listings[locale]?.clone() ?: Listing()
+        listing.language = language
+        for ((field, value) in fields) {
+            when (field) {
+                ListingField.TITLE -> listing.title = value
+                ListingField.SHORT_DESCRIPTION -> listing.shortDescription = value
+                ListingField.FULL_DESCRIPTION -> listing.fullDescription = value
+                ListingField.VIDEO_URL -> listing.video = value
+            }
+        }
+        call("update the $language listing") { edits.listings().update(packageName, editId, language, listing).execute() }
+        listings[locale] = listing
+    }
+
+    override fun images(locale: LocaleTag, type: GraphicType): List<RemoteImage> {
+        val language = playLanguage(locale)
+        val response = call("read the $language ${type.fileName} images") {
+            edits.images().list(packageName, editId, language, imageType(type)).execute()
+        }
+        return response.images.orEmpty().map { RemoteImage(it.id, it.sha256.orEmpty().lowercase(), it.url) }
+    }
+
+    override fun deleteImages(locale: LocaleTag, type: GraphicType) {
+        val language = playLanguage(locale)
+        call("delete the $language ${type.fileName} images") {
+            edits.images().deleteall(packageName, editId, language, imageType(type)).execute()
+        }
+    }
+
+    override fun uploadImage(locale: LocaleTag, type: GraphicType, file: Path): RemoteImage {
+        val language = playLanguage(locale)
+        val mediaType = if (file.extension.lowercase() == "png") "image/png" else "image/jpeg"
+        logger.info("Uploading ${file.fileName} to the $language ${type.fileName} images")
+        val image = call("upload ${file.fileName}") {
+            edits.images().upload(packageName, editId, language, imageType(type), FileContent(mediaType, file.toFile())).execute()
+        }.image
+        return RemoteImage(image.id, image.sha256.orEmpty().lowercase(), image.url)
+    }
+
+    override fun downloadImage(image: RemoteImage): ByteArray {
+        val url = image.url ?: throw StoreException("Google Play sent no URL for image ${image.id}.")
+        return call("download image ${image.id}") { download(url) }
+    }
+
     override fun commit() {
         call("commit the edit") {
             edits.commit(packageName, editId)
@@ -111,7 +204,7 @@ internal class GooglePlayEdit(
                     else -> throw IllegalArgumentException("unknown status '${release.status}'")
                 },
                 rollout = release.userFraction?.let(::Rollout) ?: Rollout.FULL,
-                releaseNotes = release.releaseNotes.orEmpty().associate { LocaleTag(canonicalTag(it.language)) to it.text },
+                releaseNotes = release.releaseNotes.orEmpty().associate { locale(it.language) to it.text },
                 name = release.name,
             )
         } catch (e: IllegalArgumentException) {
@@ -142,6 +235,25 @@ internal class GooglePlayEdit(
         return playRelease
     }
 
+    private fun playDetails(): PlayAppDetails =
+        call("read the app details") { edits.details().get(packageName, editId).execute() }
+            .also { details -> details.defaultLanguage?.let(::locale) }
+
+    private fun playListings(): MutableMap<LocaleTag, Listing> =
+        remoteListings ?: call("read the listings") { edits.listings().list(packageName, editId).execute() }
+            .listings.orEmpty()
+            .associateByTo(mutableMapOf()) { locale(it.language) }
+            .also { remoteListings = it }
+
+    /** Reads a Play language code and remembers it, so that writes use Play's own code. */
+    private fun locale(language: String): LocaleTag {
+        val locale = LocaleTag(Locale.forLanguageTag(language).toLanguageTag())
+        playLanguages[locale] = language
+        return locale
+    }
+
+    private fun playLanguage(locale: LocaleTag): String = playLanguages[locale] ?: locale.value
+
     private inline fun <T> call(action: String, block: () -> T): T =
         try {
             block()
@@ -164,8 +276,17 @@ internal class GooglePlayEdit(
 
         private fun key(versionCodes: List<Long>?): List<Long> = versionCodes.orEmpty().sorted()
 
-        // Play may send legacy codes such as iw-IL; LocaleTag needs the canonical he-IL.
-        private fun canonicalTag(language: String): String = Locale.forLanguageTag(language).toLanguageTag()
+        /** Play's AppImageType names. */
+        fun imageType(type: GraphicType): String = when (type) {
+            GraphicType.ICON -> "icon"
+            GraphicType.FEATURE_GRAPHIC -> "featureGraphic"
+            GraphicType.PHONE_SCREENSHOTS -> "phoneScreenshots"
+            GraphicType.TABLET_7_SCREENSHOTS -> "sevenInchScreenshots"
+            GraphicType.TABLET_10_SCREENSHOTS -> "tenInchScreenshots"
+            GraphicType.TV_SCREENSHOTS -> "tvScreenshots"
+            GraphicType.TV_BANNER -> "tvBanner"
+            GraphicType.WEAR_SCREENSHOTS -> "wearScreenshots"
+        }
 
         private fun megabytes(bytes: Long): String = String.format(Locale.ROOT, "%.1f MB", bytes / 1_000_000.0)
     }
