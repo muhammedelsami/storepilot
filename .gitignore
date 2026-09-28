@@ -6,3 +6,6 @@ build
 
 # Ignore Kotlin plugin data
 .kotlin
+
+# Local SDK path, written by Android Studio
+local.properties

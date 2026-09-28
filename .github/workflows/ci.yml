@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # JDK 17: toolchain for all modules and the minimum supported runtime.
+      # JDK 25: Gradle daemon (gradle/gradle-daemon-jvm.properties). The last one listed is the default.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build and test
+        run: ./gradlew build
+
+      - name: CLI smoke test
+        run: |
+          ./gradlew :cli:installDist
+          cli/build/install/storepilot/bin/storepilot --version
