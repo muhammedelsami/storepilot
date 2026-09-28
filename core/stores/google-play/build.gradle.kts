@@ -6,4 +6,8 @@ plugins {
 
 dependencies {
     implementation(project(":core:api"))
+    implementation(libs.google.androidpublisher)
+    // Newer than the one androidpublisher asks for, so that every google-http-client module is 2.x.
+    implementation(libs.google.api.client)
+    implementation(libs.google.auth)
 }

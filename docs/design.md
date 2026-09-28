@@ -78,7 +78,7 @@ These names mean the same thing in the DSL, the YAML file, the CLI flags, and th
 | **Listing** | Per-locale store page text + app-level details (contact email, website, default language). |
 | **Graphics** | Per-locale images, grouped by portable image type (§3.2). |
 | **Locale** | BCP-47 (`en-US`, `tr-TR`). Adapters convert to the store's codes. |
-| **Capability** | What an adapter supports. Checked at validation time (§3.3). |
+| **Capability** | What an adapter supports. Checked at validation time (§3.4). |
 
 ### 3.1 Metadata directory
 
@@ -131,7 +131,21 @@ store/
 | `tv-banner.png` | `tvBanner` |
 | `wear-screenshots/` | `wearScreenshots` |
 
-### 3.3 Capability gaps
+### 3.3 Google Play adapter
+
+- Tracks: `internal` and `production` keep their names. The portable `testing` track is Play's closed
+  testing track (`alpha`), so a testing release is never public by accident. Every other name, for
+  example `beta`, a custom closed-testing track, or `wear:production`, is passed to Play as-is.
+- Track rules when a release is set: a completed release replaces the track; an `inProgress` or
+  `halted` release keeps the last completed release; a draft keeps everything except the previous draft.
+- Releases read from Play are sent back as Play sent them. Fields StorePilot does not model (country
+  targeting, in-app update priority) survive halt, resume, and promote.
+- `inAppUpdatePriority` is applied only to a release uploaded in the same edit, because Play does not
+  allow changing it after the rollout started.
+- Release note languages are BCP-47 tags. Legacy codes that Play may return (`iw-IL`) are read as
+  their canonical form (`he-IL`).
+
+### 3.4 Capability gaps
 
 When a future store cannot do what the config asks (e.g. staged rollout, a graphic type), StorePilot
 **fails at validation** by default. `onUnsupported = warn` downgrades this to a warning and skips the
@@ -306,9 +320,18 @@ storepilot listing diff
 storepilot listing validate
 ```
 
-- `--store` exists on every command and defaults to `google-play`.
+- Every store command has `--store` (default `google-play`), `--config`, `--package`, `--metadata-dir`,
+  `--output text|json`, and `--dry-run`. Relative paths in flags are resolved against the working
+  directory.
+- `promote --rollout` defaults to `1.0`. `halt` and `resume` need `--track`.
+- The package name comes from `--package`, the environment, or `storepilot.yml`. Reading it from the
+  artifact is planned, at the latest with the action (milestone 6), whose example has no package name.
+- `--with-listing` arrives with the listing commands (milestone 4).
 - Distributed as a fat JAR + launcher script on GitHub Releases; later Homebrew / SDKMAN.
-- `--output json` prints a machine-readable result (used by the action).
+- `--output json` prints a machine-readable result (used by the action). Per store: `store`,
+  `packageName`, `status` (`committed` or `dryRun`), `track`, `versionCodes`, `changes` (uploads and
+  release updates with the release before and after), and `warnings`. Logs and errors go to stderr, so
+  stdout holds only the result.
 - Exit codes: `0` success, `1` config or validation error, `2` store API error,
   `3` `listing diff` found changes (only with `--exit-code`, for "fail if listing drifted" CI jobs).
 
@@ -404,7 +427,7 @@ exactly what will change on the Play page.
 
 | Output | Notes |
 |---|---|
-| `result` | JSON: per store `status`, `track`, `versionCode`, `changes`. |
+| `result` | JSON from `--output json` (§6): per store `status`, `track`, `versionCodes`, `changes`. |
 | `listing-changed` | `true`/`false`, set by `listing-diff`. |
 
 Behaviour:
@@ -421,9 +444,14 @@ Behaviour:
 
 | Store | DSL | Env var (CLI/action) |
 |---|---|---|
-| Google Play | `serviceAccountJson` or `serviceAccountFile`, or ADC | `STOREPILOT_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` |
+| Google Play | `serviceAccountJson` or `serviceAccountFile`, or ADC | `STOREPILOT_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `STOREPILOT_GOOGLE_PLAY_SERVICE_ACCOUNT_FILE` |
 
 Pattern for future stores: `STOREPILOT_<STORE_ID>_<FIELD>`, upper snake case.
+
+Google Play uses the first that is set: the key JSON, the key file, then Application Default
+Credentials (which covers keyless auth with `google-github-actions/auth`). Only service account keys
+are accepted as JSON or file; other credential types go through ADC. A key that cannot be read is
+reported without its content.
 Secrets never appear in logs, the job summary, `--output json`, or Gradle build scans.
 
 ## 9. Decisions
@@ -440,8 +468,11 @@ Decided on 2026-09-28.
      `storepilot.embedded-kotlin` convention: Kotlin API version 1.9, language version 2.0. The
      plugin's functional tests run against Gradle 8.10 and the current Gradle in CI.
    - For the same reason, these modules use Java libraries (for example `snakeyaml-engine` for
-     `storepilot.yml`) and no Kotlin libraries built for a newer stdlib. Running `core` in a Gradle
-     worker with process isolation stays possible if that becomes too limiting (milestone 5).
+     `storepilot.yml`) and no Kotlin libraries built for a newer stdlib. The CLI is not loaded by
+     Gradle, so it may use Kotlin libraries (Clikt).
+   - The Google Play adapter brings the Google API client, Guava, and Gson. Other plugins in the same
+     build (AGP among them) bring their own versions, so the plugin must run `core` in a Gradle worker
+     with classloader or process isolation. Decide which in milestone 5.
    - Still to check in milestone 5: the AGP 9 variant API.
 4. **Screenshots.** Upload-only in v1. Generation is in scope later (§4.2).
 5. **Machine translation.** In scope later (§4.1).

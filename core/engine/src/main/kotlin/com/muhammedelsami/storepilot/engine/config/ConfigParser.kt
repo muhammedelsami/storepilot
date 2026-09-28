@@ -5,7 +5,7 @@ import com.muhammedelsami.storepilot.api.ReleaseStatus
 import com.muhammedelsami.storepilot.api.Rollout
 import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.Track
-import com.muhammedelsami.storepilot.engine.ValidationException
+import com.muhammedelsami.storepilot.api.ValidationException
 import org.snakeyaml.engine.v2.api.LoadSettings
 import org.snakeyaml.engine.v2.api.lowlevel.Compose
 import org.snakeyaml.engine.v2.exceptions.YamlEngineException

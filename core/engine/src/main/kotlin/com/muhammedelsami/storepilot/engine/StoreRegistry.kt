@@ -3,6 +3,7 @@ package com.muhammedelsami.storepilot.engine
 import com.muhammedelsami.storepilot.api.Problem
 import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.StoreProvider
+import com.muhammedelsami.storepilot.api.ValidationException
 import java.util.ServiceLoader
 
 /** The store adapters that are available. */

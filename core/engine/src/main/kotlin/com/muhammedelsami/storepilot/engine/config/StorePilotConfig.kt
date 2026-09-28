@@ -25,7 +25,7 @@ data class StoreConfig(
     val options: Map<String, String> = emptyMap(),
 )
 
-/** What to do when a store cannot do what the config asks (docs/design.md §3.3). */
+/** What to do when a store cannot do what the config asks (docs/design.md §3.4). */
 enum class OnUnsupported {
     /** Stop at validation. */
     FAIL,
@@ -46,7 +46,8 @@ internal inline fun <reified E : Enum<E>> parseConfigEnum(value: String): E =
             "expected one of ${enumValues<E>().joinToString { it.configName }}, got '$value'",
         )
 
-internal fun parseRollout(value: String): Rollout {
+/** Parses a rollout as written in the config, environment variables, and CLI flags, for example `0.1`. */
+fun parseRollout(value: String): Rollout {
     val fraction = value.toDoubleOrNull()
         ?: throw IllegalArgumentException("expected a number greater than 0.0 and at most 1.0, got '$value'")
     return Rollout(fraction)

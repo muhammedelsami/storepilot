@@ -13,6 +13,7 @@ import com.muhammedelsami.storepilot.api.StoreEdit
 import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.StoreProvider
 import com.muhammedelsami.storepilot.api.Track
+import com.muhammedelsami.storepilot.api.ValidationException
 import com.muhammedelsami.storepilot.engine.config.OnUnsupported
 import com.muhammedelsami.storepilot.engine.config.StoreSettings
 import com.muhammedelsami.storepilot.engine.config.configName

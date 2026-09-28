@@ -1,7 +1,15 @@
 [versions]
+clikt = "5.1.0"
+google-androidpublisher = "v3-rev20260917-2.0.0"
+google-api-client = "2.9.1"
+google-auth = "1.53.0"
 kotlin = "2.3.0"
 snakeyaml-engine = "3.1.1"
 
 [libraries]
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+google-androidpublisher = { module = "com.google.apis:google-api-services-androidpublisher", version.ref = "google-androidpublisher" }
+google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }
+google-auth = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "google-auth" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 snakeyaml-engine = { module = "org.snakeyaml:snakeyaml-engine", version.ref = "snakeyaml-engine" }

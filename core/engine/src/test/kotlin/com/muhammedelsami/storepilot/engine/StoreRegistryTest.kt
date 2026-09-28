@@ -1,6 +1,7 @@
 package com.muhammedelsami.storepilot.engine
 
 import com.muhammedelsami.storepilot.api.StoreId
+import com.muhammedelsami.storepilot.api.ValidationException
 import com.muhammedelsami.storepilot.api.fake.FakeStoreProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals

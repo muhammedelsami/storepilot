@@ -4,7 +4,7 @@ import com.muhammedelsami.storepilot.api.ReleaseStatus
 import com.muhammedelsami.storepilot.api.Rollout
 import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.Track
-import com.muhammedelsami.storepilot.engine.ValidationException
+import com.muhammedelsami.storepilot.api.ValidationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

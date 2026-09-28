@@ -5,7 +5,7 @@ import com.muhammedelsami.storepilot.api.ReleaseStatus
 import com.muhammedelsami.storepilot.api.Rollout
 import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.Track
-import com.muhammedelsami.storepilot.engine.ValidationException
+import com.muhammedelsami.storepilot.api.ValidationException
 import java.nio.file.Path
 
 /** Values from CLI flags or action inputs. They win over everything else. */

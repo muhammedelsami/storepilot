@@ -5,7 +5,10 @@ plugins {
 
 dependencies {
     implementation(project(":core:engine"))
+    implementation(libs.clikt)
     runtimeOnly(project(":core:stores:google-play"))
+
+    testImplementation(testFixtures(project(":core:api")))
 }
 
 application {

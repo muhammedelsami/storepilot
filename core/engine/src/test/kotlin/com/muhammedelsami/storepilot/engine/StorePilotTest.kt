@@ -17,6 +17,7 @@ import com.muhammedelsami.storepilot.api.StoreId
 import com.muhammedelsami.storepilot.api.Track
 import com.muhammedelsami.storepilot.api.Track.Companion.PRODUCTION
 import com.muhammedelsami.storepilot.api.Track.Companion.TESTING
+import com.muhammedelsami.storepilot.api.ValidationException
 import com.muhammedelsami.storepilot.api.fake.FakeStoreProvider
 import com.muhammedelsami.storepilot.engine.config.OnUnsupported
 import com.muhammedelsami.storepilot.engine.config.StoreSettings
