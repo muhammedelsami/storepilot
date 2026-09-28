@@ -48,7 +48,7 @@ storepilot/
 ├── cli/                  # `storepilot` command. Reads storepilot.yml + flags, calls core.
 ├── action/               # Scripts used by the root action.yml (composite; downloads and runs the CLI).
 ├── samples/
-│   ├── android-gradle/   # Android app that uses the plugin (via includeBuild)
+│   ├── android-gradle/   # Android app that uses the plugin (via includeBuild; own Gradle wrapper)
 │   └── github-workflow/  # Example workflows that use the action
 └── docs/
 ```
@@ -321,14 +321,24 @@ The store is configured with a top-level `googlePlay { }` block. When more store
 its own top-level block (`huaweiAppGallery { }`); options set directly under `storepilot { }` are
 defaults that every store block can override.
 
+The enums come from the core modules and need imports in the build script:
+`com.muhammedelsami.storepilot.api.ArtifactType`, `com.muhammedelsami.storepilot.api.ReleaseStatus`,
+and `com.muhammedelsami.storepilot.engine.config.OnUnsupported`.
+
 ### 5.3 DSL rules
 
 - Every value is a lazy `Property`/`Provider`, so `=` assignment works and nothing is read at
   configuration time. The plugin must be **configuration-cache** and **isolated-projects** compatible.
-- Credentials are only accepted as `Provider<String>` or a file. A plain string literal for a secret
-  field is rejected with an error that shows the `providers.environmentVariable(...)` form.
+- Credentials are only accepted as `Provider<String>` or a file. `serviceAccountJson` is typed
+  `Provider<String>`, so a string literal does not compile (Kotlin: type mismatch; Groovy: cast
+  error); the KDoc shows the `providers.environmentVariable(...)` form. Without DSL credentials the
+  tasks use `STOREPILOT_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` / `_FILE`, then Application Default
+  Credentials. The plugin reads no other `STOREPILOT_*` variables; the DSL is its only settings source.
 - Without AGP, the plugin still works: the user sets `artifact` and `packageName` explicitly and gets
-  tasks without a variant name.
+  `publishArtifact`, `publishStore` (artifact + listing; `publish` alone would clash with
+  `maven-publish`), `promoteRelease`, `haltRelease`, and `resumeRelease`.
+- Tested with AGP 8.5.2 on Gradle 8.10 and AGP 9.4.1 on Gradle 9.8.0 (AGP 9.4 needs Gradle 9.6+),
+  with the configuration cache. Isolated projects is not tested yet.
 
 ### 5.4 Tasks
 
@@ -338,7 +348,7 @@ Release:
 |---|---|
 | `publish<Variant>Bundle` / `publish<Variant>Apk` | Upload artifact + release notes to the track. |
 | `promote<Variant>Release` | Move an existing release: `--from=testing --to=production --rollout=0.5`. |
-| `halt<Variant>Release` / `resume<Variant>Release` | Stop or continue a staged rollout. |
+| `halt<Variant>Release` / `resume<Variant>Release` | Stop or continue a staged rollout on the configured track, or `--track=<track>`. |
 
 Listing and ASO:
 
@@ -349,6 +359,11 @@ Listing and ASO:
 | `pullListing` | Write the live listing into `store/` (asks for `--overwrite` if files exist). |
 | `validateListing` | Local checks from §4. No network. |
 | `diffListing` | Local vs live listing (§4). Read-only network. |
+| `exportStorepilotConfig` | Write the DSL as `storepilot.yml` for the CLI and the action. No credentials. |
+
+`publish<Variant>Apk` uploads the variant's single APK; builds with APK splits should publish the
+bundle. Listing tasks use `storepilot.packageName`, or the application ID that all selected variants
+share (they fail when the variants differ).
 
 Aggregate: `publish<Variant>` = bundle + listing in **one Play edit**, so they are committed together
 or not at all.
@@ -535,10 +550,15 @@ Decided on 2026-09-28.
    - For the same reason, these modules use Java libraries (for example `snakeyaml-engine` for
      `storepilot.yml`) and no Kotlin libraries built for a newer stdlib. The CLI is not loaded by
      Gradle, so it may use Kotlin libraries (Clikt).
-   - The Google Play adapter brings the Google API client, Guava, and Gson. Other plugins in the same
-     build (AGP among them) bring their own versions, so the plugin must run `core` in a Gradle worker
-     with classloader or process isolation. Decide which in milestone 5.
-   - Still to check in milestone 5: the AGP 9 variant API.
+   - The Google Play adapter brings the Google API client, Guava, and Gson. Decided in milestone 5:
+     the plugin loads `core` and the adapter directly, without worker isolation, as Gradle Play
+     Publisher does with the same client. Gradle resolves all plugins of a build together and picks
+     the newest version of shared libraries such as Guava, and `core` only uses Java libraries and
+     Kotlin API 1.9. If a real conflict shows up, running `core` in a worker with classloader
+     isolation is the fallback.
+   - AGP 9: the variant API the plugin uses (`onVariants`, `Component.name`/`debuggable`/`artifacts`,
+     `ApplicationVariant.applicationId`, `Artifacts.get(SingleArtifact)`) is the same in 8.5.2 and
+     9.4.1. The plugin compiles against the AGP 8.5.2 API.
 4. **Screenshots.** Upload-only in v1. Generation is in scope later (§4.2).
 5. **Machine translation.** In scope later (§4.1).
 

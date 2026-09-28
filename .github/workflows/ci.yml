@@ -36,3 +36,22 @@ jobs:
         run: |
           ./gradlew :cli:installDist
           cli/build/install/storepilot/bin/storepilot --version
+
+  # The Android sample builds the plugin from this repository through includeBuild.
+  sample:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Validate the listing and check the publish task graph
+        working-directory: samples/android-gradle
+        run: ./gradlew :app:validateListing :app:publishReleaseBundle --dry-run

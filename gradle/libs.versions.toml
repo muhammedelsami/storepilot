@@ -1,4 +1,7 @@
 [versions]
+# Lowest AGP the plugin supports; it compiles against its API. Functional tests also use agp-latest.
+agp-min = "8.5.2"
+agp-latest = "9.4.1"
 clikt = "5.1.0"
 google-androidpublisher = "v3-rev20260917-2.0.0"
 google-api-client = "2.9.1"
@@ -7,6 +10,7 @@ kotlin = "2.3.0"
 snakeyaml-engine = "3.1.1"
 
 [libraries]
+agp-api = { module = "com.android.tools.build:gradle-api", version.ref = "agp-min" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 google-androidpublisher = { module = "com.google.apis:google-api-services-androidpublisher", version.ref = "google-androidpublisher" }
 google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }

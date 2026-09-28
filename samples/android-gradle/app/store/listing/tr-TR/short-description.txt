@@ -1,0 +1,1 @@
+StorePilot ile dosyalardan yayınlanan örnek uygulama.

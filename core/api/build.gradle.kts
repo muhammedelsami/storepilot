@@ -2,5 +2,6 @@
 
 plugins {
     id("storepilot.embedded-kotlin")
+    id("storepilot.published")
     `java-test-fixtures`
 }
