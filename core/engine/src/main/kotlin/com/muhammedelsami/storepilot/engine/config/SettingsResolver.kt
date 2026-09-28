@@ -63,9 +63,14 @@ class SettingsResolver(
 ) {
     /**
      * [requirePackageName] is false for operations without store calls, such as validating the
-     * listing; the package name is then empty when it is not set.
+     * listing; the package name is then empty when it is not set. [artifactPackageName] reads the
+     * package name from the artifact; it is the last source and only called when no other has one.
      */
-    fun resolve(store: StoreId, requirePackageName: Boolean = true): StoreSettings {
+    fun resolve(
+        store: StoreId,
+        requirePackageName: Boolean = true,
+        artifactPackageName: (() -> String)? = null,
+    ): StoreSettings {
         val problems = mutableListOf<Problem>()
         val storeConfig = config.stores[store] ?: StoreConfig()
         val prefix = store.envPrefix
@@ -80,9 +85,18 @@ class SettingsResolver(
             }
         }
 
-        val packageName = overrides.packageName
+        val namedPackage = overrides.packageName
             ?: fromEnv("${prefix}PACKAGE_NAME") { it }
             ?: storeConfig.packageName
+        var artifactProblem: String? = null
+        val packageName = namedPackage ?: artifactPackageName?.let { read ->
+            try {
+                read()
+            } catch (e: IllegalArgumentException) {
+                artifactProblem = e.message
+                null
+            }
+        }
         val metadataDir = overrides.metadataDir
             ?: fromEnv("STOREPILOT_METADATA_DIR") { workingDir.resolve(it) }
             ?: configDir.resolve(config.metadataDir ?: DEFAULT_METADATA_DIR)
@@ -107,7 +121,8 @@ class SettingsResolver(
         if (packageName == null && requirePackageName) {
             problems += Problem.error(
                 "No package name for store '$store'. Set 'stores.$store.packageName' in ${ConfigParser.FILE_NAME} " +
-                    "or ${prefix}PACKAGE_NAME.",
+                    "or ${prefix}PACKAGE_NAME." +
+                    artifactProblem?.let { " Reading it from the artifact failed: $it" }.orEmpty(),
             )
         } else if (packageName != null && !PACKAGE_NAME.matches(packageName)) {
             problems += Problem.error("'$packageName' is not a valid Android package name.", "stores.$store.packageName")

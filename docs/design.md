@@ -393,12 +393,16 @@ storepilot listing validate
   `--output text|json`, and `--dry-run`. Relative paths in flags are resolved against the working
   directory.
 - `promote --rollout` defaults to `1.0`. `halt` and `resume` need `--track`.
-- The package name comes from `--package`, the environment, or `storepilot.yml`. Reading it from the
-  artifact is planned, at the latest with the action (milestone 6), whose example has no package name.
+- The package name comes from `--package`, the environment, or `storepilot.yml`; `publish` then reads
+  it from the artifact (the bundle's protobuf manifest or the APK's binary XML manifest). The artifact
+  is only read when no other source has a package name.
 - `publish --with-listing` pushes the listing in the same edit as the release.
 - `listing validate` needs no package name and no credentials. It exits with `1` when it finds errors.
 - `listing diff --output json` has a top-level `listingChanged` flag (used by the action).
-- Distributed as a fat JAR + launcher script on GitHub Releases; later Homebrew / SDKMAN.
+- `--summary-file <path>` also appends a Markdown summary to that file (the action passes
+  `$GITHUB_STEP_SUMMARY`).
+- Distributed as a fat JAR (`./gradlew :cli:shadowJar` → `cli/build/libs/storepilot.jar`, run with
+  `java -jar`) on GitHub Releases, plus the `application` launcher scripts; later Homebrew / SDKMAN.
 - `--output json` prints a machine-readable result (used by the action). Per store: `store`,
   `packageName`, `status` (`committed` or `dryRun`), `track`, `versionCodes`, `changes` (uploads and
   release updates with the release before and after), and `warnings`. Logs and errors go to stderr, so
@@ -490,32 +494,45 @@ jobs:
 On a PR, `listing-diff` writes the validation result and the diff to the job summary, so reviewers see
 exactly what will change on the Play page.
 
-### 7.3 `action.yml` surface (draft)
+### 7.3 `action.yml` surface
 
 | Input | Required | Default | Notes |
 |---|---|---|---|
-| `command` | no | `publish` | `publish`, `promote`, `listing-push`, `listing-diff`, `listing-validate`. |
-| `artifact` | for `publish` | — | Path or glob; glob must match exactly one file. |
-| `package-name` | no | from config / artifact | |
+| `command` | no | `publish` | `publish`, `promote`, `halt`, `resume`, `listing-push`, `listing-diff`, `listing-validate`. |
+| `artifact` | for `publish` | — | Path or glob; the glob must match exactly one file. |
+| `package-name` | no | from config, then from the artifact | |
+| `store` | no | `google-play` | |
 | `config` | no | `storepilot.yml` if present | |
-| `metadata-dir` | no | `store` | |
-| `track`, `rollout` | no | from config | |
+| `metadata-dir` | no | `store` next to the config file | |
+| `track` | for `promote`, `halt`, `resume` | from config | `publish`: the release track; `promote`: the target track. |
+| `from-track` | for `promote` | — | The track that has the release. |
+| `rollout` | no | from config | |
 | `with-listing` | no | `false` | `publish` also pushes the listing in the same edit. |
-| `dry-run` | no | `false` | |
-| `version` | no | action tag | CLI version to download. |
+| `text-only` | no | `false` | `listing-push` without graphics. |
+| `dry-run` | no | `false` | `publish`, `promote`, `halt`, `resume`, `listing-push`. |
+| `version` | no | see below | CLI version to download. |
 | `google-play-service-account-json` | no* | — | *Not needed with keyless auth (below). |
 
 | Output | Notes |
 |---|---|
-| `result` | JSON from `--output json` (§6): per store `status`, `track`, `versionCodes`, `changes`. |
-| `listing-changed` | `true`/`false`, set by `listing-diff` from `listingChanged` in its JSON. |
+| `result` | JSON from `--output json` (§6). |
+| `listing-changed` | `true`/`false`, set by `listing-diff` (the CLI's exit code 3 means changed). |
 
 Behaviour:
 
-- **Composite action**: checks Java is available, downloads the CLI (cached with `actions/cache`),
-  runs it with `--output json`. No Docker, so it runs on Linux, macOS, and Windows runners.
-- Credential inputs reach the CLI through environment variables, never as arguments, and are masked.
-- Writes a job summary: release table for `publish`, coverage + diff tables for listing commands.
+- **Composite action** (`action.yml` + `action/*.sh`, bash on every OS, bash 3.2 compatible): checks
+  for Java 17+, gets the CLI jar, and runs it with `--output json` and `--summary-file
+  $GITHUB_STEP_SUMMARY`. No Docker, so it runs on Linux, macOS, and Windows runners.
+- **CLI version**: the `version` input, else the content of `action/cli-version`. A release sets that
+  file to its version; on a branch it is `source`, and the action builds `storepilot.jar` from the
+  checked-out source with Gradle (slower, used by this repository's CI). A released jar is downloaded
+  from the GitHub Release `v<version>` together with `storepilot.jar.sha256`, checked, and cached with
+  `actions/cache`.
+- Credential inputs reach the CLI through environment variables, never as arguments. Lines of the key
+  that are 16 characters or longer are masked, in addition to GitHub's masking of secrets.
+- Writes a job summary (the CLI's Markdown): changes for release commands and `listing-push`, a diff
+  table for `listing-diff`, problems and the coverage table for `listing-validate`.
+- `listing-diff` treats "the listing differs" as success and sets `listing-changed`.
 - Keyless Google auth: if `google-github-actions/auth` ran earlier in the job, StorePilot uses
   Application Default Credentials and the JSON input is not needed.
 - Future stores add inputs named `<store>-<field>` (e.g. `huawei-client-id`).
@@ -570,7 +587,8 @@ Decided on 2026-09-28.
 4. Listing: `pull`, `push`, `validate`, `diff` in core + CLI.
 5. Gradle plugin on top of core; `samples/android-gradle`.
 6. GitHub Action + `samples/github-workflow`.
-7. First public release (Plugin Portal, GitHub Release, Marketplace).
+7. First public release (Plugin Portal, GitHub Release, Marketplace). The GitHub Release carries
+   `storepilot.jar` and `storepilot.jar.sha256`, and the release commit sets `action/cli-version`.
 8. Machine translation (§4.1).
 9. Screenshot generation (§4.2).
 10. Second store adapter.

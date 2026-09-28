@@ -3,6 +3,7 @@ package com.muhammedelsami.storepilot.gradle
 import com.muhammedelsami.storepilot.api.Artifact
 import com.muhammedelsami.storepilot.api.Track
 import com.muhammedelsami.storepilot.engine.StoreResult
+import com.muhammedelsami.storepilot.engine.artifact.ArtifactInspector
 import com.muhammedelsami.storepilot.engine.config.parseRollout
 import com.muhammedelsami.storepilot.engine.report.TextReport
 import org.gradle.api.GradleException
@@ -55,8 +56,8 @@ abstract class PublishTask : StoreChangeTask() {
 
     @TaskAction
     fun publish() {
-        val settings = storeSettings()
         val artifact = engineCall { Artifact.of(artifactFile()) }
+        val settings = storeSettings(artifactPackageName = { ArtifactInspector.packageName(artifact) })
         report(engineCall { storePilot().publish(artifact, listOf(settings), dryRun, withListing.get()) })
     }
 

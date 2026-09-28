@@ -111,6 +111,30 @@ class SettingsResolverTest {
     }
 
     @Test
+    fun `the artifact is the last source of the package name`() {
+        val fromArtifact = SettingsResolver(StorePilotConfig(), configDir, workingDir = workingDir)
+            .resolve(store, artifactPackageName = { "com.example.artifact" })
+        assertEquals("com.example.artifact", fromArtifact.packageName)
+
+        val config = StorePilotConfig(stores = mapOf(store to StoreConfig(packageName = "com.example.file")))
+        val fromFile = SettingsResolver(config, configDir, workingDir = workingDir)
+            .resolve(store, artifactPackageName = { error("must not be read") })
+        assertEquals("com.example.file", fromFile.packageName)
+
+        val e = assertFailsWith<ValidationException> {
+            SettingsResolver(StorePilotConfig(), configDir, workingDir = workingDir)
+                .resolve(store, artifactPackageName = { throw IllegalArgumentException("app.aab has no manifest.") })
+        }
+        assertEquals(
+            listOf(
+                "No package name for store 'google-play'. Set 'stores.google-play.packageName' in storepilot.yml or " +
+                    "STOREPILOT_GOOGLE_PLAY_PACKAGE_NAME. Reading it from the artifact failed: app.aab has no manifest.",
+            ),
+            e.problems.map { it.message },
+        )
+    }
+
+    @Test
     fun `rejects an invalid package name`() {
         val e = assertFailsWith<ValidationException> {
             resolve(StorePilotConfig(stores = mapOf(store to StoreConfig(packageName = "example"))))

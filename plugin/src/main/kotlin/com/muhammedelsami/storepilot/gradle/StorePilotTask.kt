@@ -107,8 +107,14 @@ abstract class StorePilotTask : DefaultTask() {
         group = "StorePilot"
     }
 
-    /** The engine settings, built with the CLI's rules. */
-    protected fun storeSettings(requirePackageName: Boolean = true): StoreSettings = engineCall {
+    /**
+     * The engine settings, built with the CLI's rules. [artifactPackageName] reads the package name
+     * from the artifact when nothing else sets it.
+     */
+    protected fun storeSettings(
+        requirePackageName: Boolean = true,
+        artifactPackageName: (() -> String)? = null,
+    ): StoreSettings = engineCall {
         val storeId = StoreId(store.get())
         val unknownRules = disabledLintRules.get() - LintRule.entries.map { it.id }.toSet()
         if (unknownRules.isNotEmpty()) {
@@ -133,7 +139,7 @@ abstract class StorePilotTask : DefaultTask() {
         )
         val dir = metadataDir.get().asFile.toPath()
         val overrides = Overrides(packageName = resolvePackageName(requirePackageName), metadataDir = dir)
-        SettingsResolver(config, dir, emptyMap(), overrides, dir).resolve(storeId, requirePackageName)
+        SettingsResolver(config, dir, emptyMap(), overrides, dir).resolve(storeId, requirePackageName, artifactPackageName)
     }
 
     protected fun storePilot(): StorePilot {

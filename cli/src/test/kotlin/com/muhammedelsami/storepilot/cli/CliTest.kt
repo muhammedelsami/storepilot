@@ -140,8 +140,11 @@ class CliTest {
         val result = run("publish", "--store", "fake", "--artifact", "app-release.aab")
 
         assertEquals(1, result.statusCode)
-        assertEquals(
-            "error: No package name for store 'fake'. Set 'stores.fake.packageName' in storepilot.yml or STOREPILOT_FAKE_PACKAGE_NAME.\n",
+        assertTrue(
+            result.stderr.startsWith(
+                "error: No package name for store 'fake'. Set 'stores.fake.packageName' in storepilot.yml or " +
+                    "STOREPILOT_FAKE_PACKAGE_NAME. Reading it from the artifact failed: app-release.aab is not a readable aab file",
+            ),
             result.stderr,
         )
     }

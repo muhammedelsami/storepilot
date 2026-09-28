@@ -156,6 +156,15 @@ class ListingOperationsTest {
     }
 
     @Test
+    fun `validate needs the metadata directory`() {
+        val e = assertFailsWith<ValidationException> {
+            storePilot.validateListing(listOf(settings().copy(metadataDir = dir.resolve("missing"))))
+        }
+
+        assertEquals("The metadata directory does not exist.", e.problems.single().message)
+    }
+
+    @Test
     fun `validation errors stop the push before any store call`() {
         write("listing/en-US/title.txt", "x".repeat(31))
 

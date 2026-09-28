@@ -24,6 +24,7 @@ import com.muhammedelsami.storepilot.api.ValidationException
 import com.muhammedelsami.storepilot.engine.StorePilot
 import com.muhammedelsami.storepilot.engine.StoreRegistry
 import com.muhammedelsami.storepilot.engine.StoreResult
+import com.muhammedelsami.storepilot.engine.artifact.ArtifactInspector
 import com.muhammedelsami.storepilot.engine.config.ConfigParser
 import com.muhammedelsami.storepilot.engine.config.EnvironmentSecrets
 import com.muhammedelsami.storepilot.engine.config.Overrides
@@ -33,7 +34,9 @@ import com.muhammedelsami.storepilot.engine.config.StoreSettings
 import com.muhammedelsami.storepilot.engine.config.parseRollout
 import com.muhammedelsami.storepilot.engine.report.TextReport
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import kotlin.io.path.isRegularFile
 
 /** What the CLI reads from its surroundings. Tests replace it. */
@@ -79,8 +82,8 @@ private class ListingCommand : CliktCommand(name = "listing") {
 
 private val VERSION = RootCommand::class.java.`package`?.implementationVersion ?: "dev"
 
-/** What a command prints, and its exit code. */
-private class Output(val text: String, val json: String, val exitCode: Int = 0)
+/** What a command prints, its Markdown summary, and its exit code. */
+private class Output(val text: String, val json: String, val markdown: String, val exitCode: Int = 0)
 
 /**
  * Options every store command has, and the mapping of outcomes to exit codes: 1 for config or
@@ -96,9 +99,13 @@ private abstract class StoreCommand(name: String, private val environment: CliEn
     private val metadataDir by option("--metadata-dir", help = "Metadata directory. Default: store, next to the config file.")
         .path()
     private val output by option("--output", help = "Output format. Default: text.").choice("text", "json").default("text")
+    private val summaryFile by option("--summary-file", help = "Also append a Markdown summary to this file.").path()
 
     /** False for commands without store calls. */
     protected open val needsPackageName: Boolean = true
+
+    /** Reads the package name from the artifact, for commands that have one. */
+    protected open val artifactPackageName: (() -> String)? = null
 
     protected abstract fun execute(storePilot: StorePilot, settings: StoreSettings): Output
 
@@ -112,12 +119,15 @@ private abstract class StoreCommand(name: String, private val environment: CliEn
         option("--dry-run", help = "Read from the store and show the changes, but commit nothing.").flag()
 
     protected fun results(results: List<StoreResult>, dryRun: Boolean) =
-        Output(TextReport.render(results).trimEnd(), JsonReport.render(results, dryRun))
+        Output(TextReport.render(results).trimEnd(), JsonReport.render(results, dryRun), MarkdownReport.render(results, dryRun))
 
     final override fun run() {
         val exitCode = try {
             val output = execute(storePilot(), settings())
             echo(if (this.output == "json") output.json else shorten(output.text))
+            summaryFile?.let {
+                Files.writeString(resolve(it), shorten(output.markdown) + "\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+            }
             output.exitCode
         } catch (e: ValidationException) {
             e.problems.forEach { echo(shorten(it.toString()), err = true) }
@@ -141,7 +151,7 @@ private abstract class StoreCommand(name: String, private val environment: CliEn
         val parsed = file?.let { ConfigParser.load(it) } ?: StorePilotConfig()
         val configDir = file?.parent ?: environment.workingDir
         return SettingsResolver(parsed, configDir, environment.env, overrides(), environment.workingDir)
-            .resolve(store, needsPackageName)
+            .resolve(store, needsPackageName, artifactPackageName)
     }
 
     private fun storePilot(): StorePilot {
@@ -169,10 +179,12 @@ private class PublishCommand(environment: CliEnvironment) : StoreCommand("publis
 
     override fun overrides() = super.overrides().copy(track = track, rollout = rollout)
 
-    override fun execute(storePilot: StorePilot, settings: StoreSettings) = results(
-        storePilot.publish(artifact.copy(path = resolve(artifact.path)), listOf(settings), dryRun, withListing),
-        dryRun,
-    )
+    override val artifactPackageName: () -> String = { ArtifactInspector.packageName(resolvedArtifact()) }
+
+    override fun execute(storePilot: StorePilot, settings: StoreSettings) =
+        results(storePilot.publish(resolvedArtifact(), listOf(settings), dryRun, withListing), dryRun)
+
+    private fun resolvedArtifact() = artifact.copy(path = resolve(artifact.path))
 }
 
 private class PromoteCommand(environment: CliEnvironment) : StoreCommand("promote", environment) {
@@ -221,7 +233,7 @@ private class ListingPullCommand(environment: CliEnvironment) : StoreCommand("pu
 
     override fun execute(storePilot: StorePilot, settings: StoreSettings): Output {
         val result = storePilot.pullListing(settings, overwrite)
-        return Output(TextReport.renderPull(result).trimEnd(), JsonReport.renderPull(result))
+        return Output(TextReport.renderPull(result).trimEnd(), JsonReport.renderPull(result), MarkdownReport.renderPull(result))
     }
 }
 
@@ -233,7 +245,12 @@ private class ListingDiffCommand(environment: CliEnvironment) : StoreCommand("di
     override fun execute(storePilot: StorePilot, settings: StoreSettings): Output {
         val results = storePilot.diffListing(listOf(settings))
         val changed = results.any { it.listingDiff?.hasChanges == true }
-        return Output(TextReport.renderDiff(results).trimEnd(), JsonReport.renderDiff(results), if (exitCode && changed) 3 else 0)
+        return Output(
+            TextReport.renderDiff(results).trimEnd(),
+            JsonReport.renderDiff(results),
+            MarkdownReport.renderDiff(results),
+            if (exitCode && changed) 3 else 0,
+        )
     }
 }
 
@@ -245,7 +262,12 @@ private class ListingValidateCommand(environment: CliEnvironment) : StoreCommand
     override fun execute(storePilot: StorePilot, settings: StoreSettings): Output {
         val checks = storePilot.validateListing(listOf(settings))
         val failed = checks.any { it.validation.hasErrors }
-        return Output(TextReport.renderValidation(checks).trimEnd(), JsonReport.renderValidation(checks), if (failed) 1 else 0)
+        return Output(
+            TextReport.renderValidation(checks).trimEnd(),
+            JsonReport.renderValidation(checks),
+            MarkdownReport.renderValidation(checks),
+            if (failed) 1 else 0,
+        )
     }
 }
 

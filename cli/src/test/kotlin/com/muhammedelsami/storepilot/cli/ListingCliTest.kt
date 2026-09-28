@@ -80,6 +80,37 @@ class ListingCliTest {
     }
 
     @Test
+    fun `writes a Markdown summary`() {
+        write("store/listing/en-US/title.txt", "Pilot\n")
+
+        run("listing", "validate", "--store", "fake", "--summary-file", "summary.md")
+        run("listing", "diff", "--store", "fake", "--package", packageName, "--summary-file", "summary.md")
+
+        assertEquals(
+            """
+            ### StorePilot listing check
+
+            **fake** · 0 error(s), 0 warning(s)
+
+            | Locale | title | short-description | full-description | video-url |
+            |---|---|---|---|---|
+            | en-US | ✅ | – | – | – |
+
+            ### StorePilot listing diff
+
+            **fake** · `com.example.app` · changes
+
+            | Locale | Item | Status |
+            |---|---|---|
+            | en-US | title | added |
+
+
+            """.trimIndent(),
+            dir.resolve("summary.md").readText(),
+        )
+    }
+
+    @Test
     fun `pull writes the listing`() {
         store.state.listings[packageName] = mutableMapOf(en to mapOf(ListingField.TITLE to "Pilot"))
 

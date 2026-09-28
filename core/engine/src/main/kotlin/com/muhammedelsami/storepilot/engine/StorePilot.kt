@@ -134,13 +134,18 @@ class StorePilot(
     }
 
     /** Checks each target's listing against its store's rules and the lint rules. No network calls. */
-    fun validateListing(targets: List<StoreSettings>): List<ListingCheck> =
-        targets.map { settings ->
+    fun validateListing(targets: List<StoreSettings>): List<ListingCheck> {
+        val missing = targets.map { it.metadataDir }.distinct().filter { !it.isDirectory() }
+        if (missing.isNotEmpty()) {
+            throw ValidationException(missing.map { Problem.error("The metadata directory does not exist.", it.toString()) })
+        }
+        return targets.map { settings ->
             val provider = stores[settings.store]
             val validation = ListingValidator(provider.listingRules, provider.displayName, settings)
                 .validate(ListingReader.read(settings.metadataDir))
             ListingCheck(settings.store, validation)
         }
+    }
 
     /**
      * Makes the store listing equal to the repository: details, text, and (unless [textOnly]) graphics.
