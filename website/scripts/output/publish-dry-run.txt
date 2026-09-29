@@ -1,0 +1,11 @@
+google-play (com.example.notes): dry run, nothing committed
+  upload app-release.aab
+  track production: new release, inProgress 10%, release notes: en-US, tr-TR
+    before: version code 41, completed
+  details contact-email: "storepilot@example.com" (was "support@example.com")
+  details contact-website: "https://github.com/muhammedelsami/storepilot" (new)
+  listing en-US short-description: "Shows how StorePilot publishes an app from files." (was "An app that shows StorePilot.")
+  listing tr-TR title: "StorePilot Örnek" (new)
+  listing tr-TR short-description: "StorePilot ile dosyalardan yayınlanan örnek uygulama." (new)
+  graphics en-US feature-graphic: replace 0 images with 1 image
+  graphics en-US phone-screenshots: replace 2 images with 2 images

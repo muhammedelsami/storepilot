@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="StorePilot">
+  <rect width="64" height="64" rx="15" fill="#0F2A43"/>
+  <path d="M14 48 C 22 44, 22 30, 32 28 S 40 20, 41 18" fill="none" stroke="#E0467F" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 6"/>
+  <circle cx="14" cy="48" r="4.5" fill="#F6F8F7"/>
+  <path d="M38 12 L54 21.5 L38 31 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="2" stroke-linejoin="round"/>
+</svg>

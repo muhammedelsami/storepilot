@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="902" height="340" viewBox="0 0 902 340" role="img" aria-label="Output of storepilot publish --artifact app-release.aab --track production --rollout 0.1 --with-listing --dry-run">
+  <rect width="902" height="340" rx="10" fill="#0B2033"/>
+  <path d="M0 10a10 10 0 0 1 10-10h882a10 10 0 0 1 10 10v24H0z" fill="#10283F"/>
+  <text x="451" y="21" fill="#8FA3B5" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" text-anchor="middle">terminal</text>
+  <g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" xml:space="preserve" style="white-space: pre">
+    <text x="20" y="65" fill="#5FD39A">$ storepilot publish --artifact app-release.aab --track production --rollout 0.1 --with-listing --dry-run</text>
+    <text x="20" y="105" fill="#DCE6EE">google-play (com.example.notes): dry run, nothing committed</text>
+    <text x="20" y="125" fill="#DCE6EE">  upload app-release.aab</text>
+    <text x="20" y="145" fill="#DCE6EE">  track production: new release, inProgress 10%, release notes: en-US, tr-TR</text>
+    <text x="20" y="165" fill="#8FA3B5">    before: version code 41, completed</text>
+    <text x="20" y="185" fill="#DCE6EE">  details contact-email: "storepilot@example.com" (was "support@example.com")</text>
+    <text x="20" y="205" fill="#DCE6EE">  details contact-website: "https://github.com/muhammedelsami/storepilot" (new)</text>
+    <text x="20" y="225" fill="#DCE6EE">  listing en-US short-description: "Shows how StorePilot publishes an app from files." (was "An app that shows</text>
+    <text x="20" y="245" fill="#DCE6EE">    StorePilot.")</text>
+    <text x="20" y="265" fill="#DCE6EE">  listing tr-TR title: "StorePilot Örnek" (new)</text>
+    <text x="20" y="285" fill="#DCE6EE">  listing tr-TR short-description: "StorePilot ile dosyalardan yayınlanan örnek uygulama." (new)</text>
+    <text x="20" y="305" fill="#DCE6EE">  graphics en-US feature-graphic: replace 0 images with 1 image</text>
+    <text x="20" y="325" fill="#DCE6EE">  graphics en-US phone-screenshots: replace 2 images with 2 images</text>
+  </g>
+</svg>

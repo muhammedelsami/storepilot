@@ -1,0 +1,14 @@
+{
+  "name": "storepilot-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "node scripts/terminal-svg.mjs && vitepress build",
+    "preview": "vitepress preview",
+    "screenshots": "node scripts/terminal-svg.mjs"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

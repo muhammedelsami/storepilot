@@ -81,8 +81,9 @@ internal object MarkdownReport {
         warnings(result.warnings.map { it.toString() })
     }
 
+    // A release update has a second line ("before: ..."); a list item needs one line.
     private fun describe(change: Change): String =
-        TextReport.describe(change).lines().joinToString(" ") { it.trim() }
+        TextReport.describe(change).lines().joinToString("; ") { it.trim() }
 
     private fun StringBuilder.table(header: List<String>, rows: List<List<String>>) {
         appendLine("| " + header.joinToString(" | ") + " |")

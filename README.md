@@ -2,6 +2,8 @@
 
 Publish Android releases and Google Play store listings from files in your repository.
 
+**Documentation: https://muhammedelsami.github.io/storepilot/**
+
 - **Release upload**: push an `.aab` or `.apk` to a track, with a staged rollout and release notes.
   Promote, halt, and resume releases.
 - **Store listing as files**: titles, descriptions, contact details, screenshots, and graphics per
@@ -18,7 +20,7 @@ StorePilot 0.x supports Google Play. The design keeps room for other Android sto
 // app/build.gradle.kts
 plugins {
     id("com.android.application")
-    id("io.github.muhammedelsami.storepilot") version "0.1.0"
+    id("io.github.muhammedelsami.storepilot") version "0.1.1"
 }
 
 storepilot {
@@ -99,9 +101,22 @@ Create a service account in Google Cloud, give it access to the app in the Play 
 JSON key through `STOREPILOT_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, the Gradle DSL, or the action input.
 Without a key, StorePilot uses Application Default Credentials. Keys never appear in logs or output.
 
+## Roadmap
+
+Designed but not scheduled; details on the [roadmap page](https://muhammedelsami.github.io/storepilot/roadmap).
+
+- **Machine translation**: `storepilot listing translate --from en-US --to de-DE,fr-FR` writes
+  translated listing files for review in a pull request, through a pluggable translation service.
+- **Screenshot generation**: collect store screenshots from the app's screenshot tests (for example
+  Roborazzi or Paparazzi) per language and device, fitted to Google Play's rules.
+- **More Android stores**: adapters for stores such as Huawei AppGallery or the Samsung Galaxy Store.
+- Changing the percentage of a rollout that is already live, and support for Gradle's isolated projects.
+
 ## More
 
-- `docs/design.md`: design, configuration reference, and decisions.
+- [Documentation](https://muhammedelsami.github.io/storepilot/): guides for the Gradle plugin, the
+  action, and the CLI, the configuration reference, and troubleshooting. Its source is in `website/`.
+- `docs/design.md`: design and decisions.
 - `RELEASING.md`: how a release is made.
 
 Licensed under the Apache License 2.0.

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="917" height="400" viewBox="0 0 917 400" role="img" aria-label="Output of ./gradlew :app:tasks --group=StorePilot">
+  <rect width="917" height="400" rx="10" fill="#0B2033"/>
+  <path d="M0 10a10 10 0 0 1 10-10h897a10 10 0 0 1 10 10v24H0z" fill="#10283F"/>
+  <text x="458.5" y="21" fill="#8FA3B5" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" text-anchor="middle">terminal</text>
+  <g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" xml:space="preserve" style="white-space: pre">
+    <text x="20" y="65" fill="#5FD39A">$ ./gradlew :app:tasks --group=StorePilot</text>
+    <text x="20" y="105" fill="#DCE6EE">StorePilot tasks</text>
+    <text x="20" y="125" fill="#8FA3B5">----------------</text>
+    <text x="20" y="145" fill="#DCE6EE">diffListing - Compares the metadata directory with the store listing. Only reads.</text>
+    <text x="20" y="165" fill="#DCE6EE">exportStorepilotConfig - Writes the storepilot { } settings as storepilot.yml for the CLI and the GitHub Action.</text>
+    <text x="20" y="185" fill="#DCE6EE">haltReleaseRelease - Stops the staged rollout on the configured track, or --track=&lt;track&gt;.</text>
+    <text x="20" y="205" fill="#DCE6EE">promoteReleaseRelease - Moves the newest release of a track to another track: --from=&lt;track&gt; --to=&lt;track&gt;</text>
+    <text x="20" y="225" fill="#DCE6EE">    [--rollout=&lt;fraction&gt;].</text>
+    <text x="20" y="245" fill="#DCE6EE">publishListing - Pushes details, listing text, and graphics from the metadata directory.</text>
+    <text x="20" y="265" fill="#DCE6EE">publishListingText - Pushes details and listing text, no graphics.</text>
+    <text x="20" y="285" fill="#DCE6EE">publishRelease - Uploads the release artifact and pushes the listing in one edit.</text>
+    <text x="20" y="305" fill="#DCE6EE">publishReleaseApk - Uploads the release APK and releases it on the configured track.</text>
+    <text x="20" y="325" fill="#DCE6EE">publishReleaseBundle - Uploads the release bundle and releases it on the configured track.</text>
+    <text x="20" y="345" fill="#DCE6EE">pullListing - Writes the store listing into the metadata directory. Existing files need --overwrite.</text>
+    <text x="20" y="365" fill="#DCE6EE">resumeReleaseRelease - Continues the halted staged rollout on the configured track, or --track=&lt;track&gt;.</text>
+    <text x="20" y="385" fill="#DCE6EE">validateListing - Checks the metadata directory against the store's rules. No network.</text>
+  </g>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="902" height="320" viewBox="0 0 902 320" role="img" aria-label="Output of storepilot listing validate">
+  <rect width="902" height="320" rx="10" fill="#0B2033"/>
+  <path d="M0 10a10 10 0 0 1 10-10h882a10 10 0 0 1 10 10v24H0z" fill="#10283F"/>
+  <text x="451" y="21" fill="#8FA3B5" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" text-anchor="middle">terminal</text>
+  <g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" xml:space="preserve" style="white-space: pre">
+    <text x="20" y="65" fill="#5FD39A">$ storepilot listing validate</text>
+    <text x="20" y="105" fill="#FF8A9B">google-play: 2 errors, 2 warnings</text>
+    <text x="20" y="125" fill="#FF8A9B">  store/listing/en-US/title.txt: error: title has 35 characters; Google Play allows 30.</text>
+    <text x="20" y="145" fill="#FF8A9B">  store/listing/en-US/graphics/phone-screenshots/02.png: error: The long side can be at most 2 times the short</text>
+    <text x="20" y="165" fill="#DCE6EE">    side, got 1080 × 2400 px.</text>
+    <text x="20" y="185" fill="#F2C46D">  store/listing/en-US/short-description.txt: warning: A line ends with whitespace. [trailing-whitespace]</text>
+    <text x="20" y="205" fill="#F2C46D">  store/listing/en-US/graphics/phone-screenshots/03.png: warning: The image has an alpha channel; Google Play</text>
+    <text x="20" y="225" fill="#DCE6EE">    asks for phone-screenshots without one. [image-alpha]</text>
+    <text x="20" y="245" fill="#DCE6EE">  Locale coverage:</text>
+    <text x="20" y="265" fill="#DCE6EE">    locale  title  short-description  full-description  video-url  icon  feature-graphic  phone-screenshots</text>
+    <text x="20" y="285" fill="#DCE6EE">    en-US   yes    yes                yes               -          1     1                3</text>
+    <text x="20" y="305" fill="#DCE6EE">    tr-TR   yes    yes                -                 -          -     -                -</text>
+  </g>
+</svg>

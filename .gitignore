@@ -9,3 +9,8 @@ build
 
 # Local SDK path, written by Android Studio
 local.properties
+
+# Documentation site
+website/node_modules
+website/.vitepress/dist
+website/.vitepress/cache

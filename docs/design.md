@@ -51,7 +51,8 @@ storepilot/
 ├── samples/
 │   ├── android-gradle/   # Android app that uses the plugin (via includeBuild; own Gradle wrapper)
 │   └── github-workflow/  # Example workflows that use the action
-└── docs/
+├── docs/                 # This design document
+└── website/              # Documentation site (VitePress), published to GitHub Pages
 ```
 
 Rules:
@@ -610,3 +611,6 @@ Decided on 2026-09-28.
 8. Machine translation (§4.1).
 9. Screenshot generation (§4.2).
 10. Second store adapter.
+
+Milestones 8 to 10 are designed but not scheduled (decided 2026-09-29). They are described for users
+on the documentation site's roadmap page and in the README.

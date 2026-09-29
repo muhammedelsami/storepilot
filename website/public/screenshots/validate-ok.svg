@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="878" height="200" viewBox="0 0 878 200" role="img" aria-label="Output of storepilot listing validate">
+  <rect width="878" height="200" rx="10" fill="#0B2033"/>
+  <path d="M0 10a10 10 0 0 1 10-10h858a10 10 0 0 1 10 10v24H0z" fill="#10283F"/>
+  <text x="439" y="21" fill="#8FA3B5" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" text-anchor="middle">terminal</text>
+  <g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" xml:space="preserve" style="white-space: pre">
+    <text x="20" y="65" fill="#5FD39A">$ storepilot listing validate</text>
+    <text x="20" y="105" fill="#5FD39A">google-play: 0 errors, 0 warnings</text>
+    <text x="20" y="125" fill="#DCE6EE">  Locale coverage:</text>
+    <text x="20" y="145" fill="#DCE6EE">    locale  title  short-description  full-description  video-url  icon  feature-graphic  phone-screenshots</text>
+    <text x="20" y="165" fill="#DCE6EE">    en-US   yes    yes                yes               -          1     1                2</text>
+    <text x="20" y="185" fill="#DCE6EE">    tr-TR   yes    yes                -                 -          -     -                -</text>
+  </g>
+</svg>

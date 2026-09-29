@@ -1,0 +1,5 @@
+google-play: 0 errors, 0 warnings
+  Locale coverage:
+    locale  title  short-description  full-description  video-url  icon  feature-graphic  phone-screenshots
+    en-US   yes    yes                yes               -          1     1                2
+    tr-TR   yes    yes                -                 -          -     -                -
