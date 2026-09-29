@@ -1,7 +1,7 @@
 plugins {
     id("storepilot.kotlin-jvm")
     application
-    alias(libs.plugins.shadow)
+    id("com.gradleup.shadow")
 }
 
 dependencies {

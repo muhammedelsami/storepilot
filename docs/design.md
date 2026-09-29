@@ -569,8 +569,12 @@ Decided on 2026-09-28.
    - Gradle plugin on the Plugin Portal: artifact `storepilot-gradle-plugin`, which depends on the
      core modules from Maven Central.
    - CLI on GitHub Releases: `storepilot.jar`, `storepilot.jar.sha256`, `storepilot-<version>.zip`.
-   - Action on GitHub Marketplace, listed from the release page. GitHub advises a repository with only
-     the action's files; if the monorepo is not accepted, the action still works with `uses:`.
+   - Action on GitHub Marketplace as "StorePilot Android Publisher", listed from the release page
+     (plain "StorePilot" is a GitHub organization, and Marketplace names must not match one). GitHub
+     advises a repository with only the action's files; if the monorepo is not accepted, the action
+     still works with `uses:`.
+   - The plugin declares configuration cache support (`org.gradle.plugin-compatibility`); isolated
+     projects stays undeclared until it is tested.
    - Release process: `RELEASING.md`.
 3. **Minimum versions.** Gradle 8.10+, AGP 8.5+, JDK 17.
    - All modules compile to JVM 17 bytecode.

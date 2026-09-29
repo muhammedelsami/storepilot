@@ -7,6 +7,7 @@ google-androidpublisher = "v3-rev20260917-2.0.0"
 google-api-client = "2.9.1"
 google-auth = "1.53.0"
 kotlin = "2.3.0"
+plugin-compatibility = "1.1.0"
 plugin-publish = "2.2.1"
 shadow = "9.6.1"
 snakeyaml-engine = "3.1.1"
@@ -23,5 +24,6 @@ vanniktech-maven-publish = { module = "com.vanniktech:gradle-maven-publish-plugi
 snakeyaml-engine = { module = "org.snakeyaml:snakeyaml-engine", version.ref = "snakeyaml-engine" }
 
 [plugins]
+plugin-compatibility = { id = "org.gradle.plugin-compatibility", version.ref = "plugin-compatibility" }
 plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

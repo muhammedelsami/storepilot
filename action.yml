@@ -1,4 +1,5 @@
-name: StorePilot
+# "StorePilot" alone is taken on GitHub (an organization), and Marketplace names must not match one.
+name: StorePilot Android Publisher
 description: Publish Android releases and Google Play store listings from files in your repository.
 author: Muhammed Elşami
 branding:
