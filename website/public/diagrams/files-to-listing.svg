@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 440" width="600" height="440" role="img" aria-label="Files in the store directory and the parts of the Google Play listing they become">
+<rect width="600" height="440" rx="14" fill="#FCFDFC"/>
+<g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#0F2A43" xml:space="preserve">
+<text x="8" y="70">store/</text>
+<text x="8" y="100">├── details.yml</text>
+<text x="8" y="130">├── release-notes/</text>
+<text x="8" y="160">│   └── en-US.txt</text>
+<text x="8" y="190">└── listing/en-US/</text>
+<text x="8" y="220">    ├── title.txt</text>
+<text x="8" y="250">    ├── short-description.txt</text>
+<text x="8" y="280">    └── graphics/</text>
+<text x="8" y="310">        ├── icon.png</text>
+<text x="8" y="340">        └── phone-screenshots/</text>
+</g>
+<g font-family="'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"><rect x="372" y="16" width="212" height="408" rx="26" fill="#FFFFFF" stroke="#D9E1E6" stroke-width="1.5"/><rect x="390" y="44" width="44" height="44" rx="10" fill="#0F2A43"/><path d="M404 56 L424 66 L404 76 Z" fill="#3DDC84"/><text x="446" y="62" font-size="14" font-weight="700" fill="#0F2A43">StorePilot Sample</text><text x="446" y="80" font-size="11.5" fill="#6B7F8F">Tools</text><text x="390" y="116" font-size="12" fill="#3E5568">Shows how StorePilot publishes</text><text x="390" y="132" font-size="12" fill="#3E5568">an app from files.</text><rect x="390" y="148" width="54" height="100" rx="6" fill="#EEF2F1" stroke="#D9E1E6"/><rect x="452" y="148" width="54" height="100" rx="6" fill="#EEF2F1" stroke="#D9E1E6"/><rect x="514" y="148" width="54" height="100" rx="6" fill="#EEF2F1" stroke="#D9E1E6"/><text x="390" y="278" font-size="12.5" font-weight="650" fill="#0F2A43">What's new</text><text x="390" y="296" font-size="12" fill="#3E5568">First release of the sample.</text><text x="390" y="330" font-size="12.5" font-weight="650" fill="#0F2A43">Contact</text><text x="390" y="347" font-size="11.5" fill="#6B7F8F">storepilot@example.com</text><rect x="390" y="374" width="176" height="30" rx="15" fill="#1F9D62"/><text x="478" y="394" font-size="12.5" font-weight="650" fill="#FFFFFF" text-anchor="middle">Install</text></g>
+<path d="M144.0 95 C214.0 95, 316 342, 386 342" fill="none" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="144.0" cy="95" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="386.0" cy="342" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<path d="M160.8 155 C230.8 155, 316 290, 386 290" fill="none" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="160.8" cy="155" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="386.0" cy="290" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<path d="M160.8 215 C230.8 215, 370 60, 440 60" fill="none" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="160.8" cy="215" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="440.0" cy="60" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<path d="M261.6 245 C331.6 245, 316 118, 386 118" fill="none" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="261.6" cy="245" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="386.0" cy="118" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<path d="M186.0 305 C256.0 305, 320 70, 390 70" fill="none" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="186.0" cy="305" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="390.0" cy="70" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<path d="M270.0 335 C340.0 335, 316 196, 386 196" fill="none" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="270.0" cy="335" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+<circle cx="386.0" cy="196" r="3.5" fill="#FCFDFC" stroke="#C0266D" stroke-width="1.6"/>
+</svg>

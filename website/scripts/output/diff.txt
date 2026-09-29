@@ -1,0 +1,13 @@
+google-play (com.example.notes): changes
+  details default-language: unchanged
+  details contact-email: changed
+  details contact-website: added
+  en-US title: unchanged
+  en-US short-description: changed
+  en-US full-description: unchanged
+  tr-TR title: added
+  tr-TR short-description: added
+  de-DE title: remote only
+  en-US feature-graphic: 1 added
+  en-US icon: 1 unchanged
+  en-US phone-screenshots: 1 unchanged, 1 added, 1 removed

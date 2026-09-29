@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="495" height="360" viewBox="0 0 495 360" role="img" aria-label="Output of storepilot listing diff --package com.example.notes">
+  <rect width="495" height="360" rx="10" fill="#0B2033"/>
+  <path d="M0 10a10 10 0 0 1 10-10h475a10 10 0 0 1 10 10v24H0z" fill="#10283F"/>
+  <text x="247.5" y="21" fill="#8FA3B5" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" text-anchor="middle">terminal</text>
+  <g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" xml:space="preserve" style="white-space: pre">
+    <text x="20" y="65" fill="#5FD39A">$ storepilot listing diff --package com.example.notes</text>
+    <text x="20" y="105" fill="#DCE6EE">google-play (com.example.notes): changes</text>
+    <text x="20" y="125" fill="#DCE6EE">  details default-language: unchanged</text>
+    <text x="20" y="145" fill="#DCE6EE">  details contact-email: changed</text>
+    <text x="20" y="165" fill="#DCE6EE">  details contact-website: added</text>
+    <text x="20" y="185" fill="#DCE6EE">  en-US title: unchanged</text>
+    <text x="20" y="205" fill="#DCE6EE">  en-US short-description: changed</text>
+    <text x="20" y="225" fill="#DCE6EE">  en-US full-description: unchanged</text>
+    <text x="20" y="245" fill="#DCE6EE">  tr-TR title: added</text>
+    <text x="20" y="265" fill="#DCE6EE">  tr-TR short-description: added</text>
+    <text x="20" y="285" fill="#DCE6EE">  de-DE title: remote only</text>
+    <text x="20" y="305" fill="#DCE6EE">  en-US feature-graphic: 1 added</text>
+    <text x="20" y="325" fill="#DCE6EE">  en-US icon: 1 unchanged</text>
+    <text x="20" y="345" fill="#DCE6EE">  en-US phone-screenshots: 1 unchanged, 1 added, 1 removed</text>
+  </g>
+</svg>

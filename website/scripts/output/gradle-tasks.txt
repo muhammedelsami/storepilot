@@ -1,0 +1,15 @@
+StorePilot tasks
+----------------
+diffListing - Compares the metadata directory with the store listing. Only reads.
+exportStorepilotConfig - Writes the storepilot { } settings as storepilot.yml for the CLI and the GitHub Action.
+haltReleaseRelease - Stops the staged rollout on the configured track, or --track=<track>.
+promoteReleaseRelease - Moves the newest release of a track to another track: --from=<track> --to=<track> [--rollout=<fraction>].
+publishListing - Pushes details, listing text, and graphics from the metadata directory.
+publishListingText - Pushes details and listing text, no graphics.
+publishRelease - Uploads the release artifact and pushes the listing in one edit.
+publishReleaseApk - Uploads the release APK and releases it on the configured track.
+publishReleaseBundle - Uploads the release bundle and releases it on the configured track.
+pullListing - Writes the store listing into the metadata directory. Existing files need --overwrite.
+resumeReleaseRelease - Continues the halted staged rollout on the configured track, or --track=<track>.
+validateListing - Checks the metadata directory against the store's rules. No network.
+
