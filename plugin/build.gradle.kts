@@ -2,6 +2,7 @@ plugins {
     id("storepilot.embedded-kotlin")
     id("storepilot.published")
     `java-gradle-plugin`
+    alias(libs.plugins.plugin.publish)
 }
 
 // Lowest Gradle version the plugin supports. The functional tests run against it and the current one.
@@ -19,10 +20,26 @@ dependencies {
 }
 
 gradlePlugin {
+    website = "https://github.com/muhammedelsami/storepilot"
+    vcsUrl = "https://github.com/muhammedelsami/storepilot.git"
     plugins {
         create("storepilot") {
-            id = "com.muhammedelsami.storepilot"
-            implementationClass = "com.muhammedelsami.storepilot.gradle.StorePilotPlugin"
+            id = "io.github.muhammedelsami.storepilot"
+            implementationClass = "io.github.muhammedelsami.storepilot.gradle.StorePilotPlugin"
+            displayName = "StorePilot"
+            description = "Publishes Android releases and Google Play store listings from files in the repository, " +
+                "and checks listings against the store's rules."
+            tags = listOf("android", "google-play", "play-store", "publishing", "store-listing", "aso")
+        }
+    }
+}
+
+publishing.publications.withType<MavenPublication>().configureEach {
+    if (name == "pluginMaven") {
+        artifactId = "storepilot-gradle-plugin"
+        pom {
+            name = "StorePilot Gradle plugin"
+            description = "Gradle plugin of StorePilot."
         }
     }
 }

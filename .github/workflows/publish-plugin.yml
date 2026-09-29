@@ -1,0 +1,36 @@
+# Publishes the Gradle plugin of a release to the Gradle Plugin Portal. Run it by hand once the core
+# modules of that release are on Maven Central, because the plugin depends on them (RELEASING.md).
+name: Publish plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Publish to the Gradle Plugin Portal
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        run: ./gradlew :plugin:publishPlugins

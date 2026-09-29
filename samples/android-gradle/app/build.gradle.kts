@@ -1,14 +1,14 @@
 plugins {
     id("com.android.application") version "9.4.1"
-    id("com.muhammedelsami.storepilot")
+    id("io.github.muhammedelsami.storepilot")
 }
 
 android {
-    namespace = "com.muhammedelsami.storepilot.sample"
+    namespace = "io.github.muhammedelsami.storepilot.sample"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.muhammedelsami.storepilot.sample"
+        applicationId = "io.github.muhammedelsami.storepilot.sample"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

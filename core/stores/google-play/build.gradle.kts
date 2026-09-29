@@ -12,3 +12,11 @@ dependencies {
     implementation(libs.google.api.client)
     implementation(libs.google.auth)
 }
+
+mavenPublishing {
+    coordinates(artifactId = "storepilot-google-play")
+    pom {
+        name = "StorePilot Google Play adapter"
+        description = "Google Play Developer API adapter for StorePilot."
+    }
+}

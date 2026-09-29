@@ -38,6 +38,7 @@ It has three entry points that share one engine:
 ```
 storepilot/
 ├── action.yml            # GitHub Action entry point (must be at the root, see §9)
+├── README.md, RELEASING.md
 ├── build-logic/          # Included build with the convention plugins used by every module
 ├── core/                 # Store-agnostic engine. Pure Kotlin/JVM. No Gradle, no Android deps.
 │   ├── api/              #   Model + StoreProvider SPI
@@ -262,7 +263,7 @@ instrumented tests); whether framing (device frame, background, caption text) is
 // app/build.gradle.kts
 plugins {
     id("com.android.application")
-    id("com.muhammedelsami.storepilot") version "0.1.0"
+    id("io.github.muhammedelsami.storepilot") version "0.1.0"
 }
 
 storepilot {
@@ -322,8 +323,8 @@ its own top-level block (`huaweiAppGallery { }`); options set directly under `st
 defaults that every store block can override.
 
 The enums come from the core modules and need imports in the build script:
-`com.muhammedelsami.storepilot.api.ArtifactType`, `com.muhammedelsami.storepilot.api.ReleaseStatus`,
-and `com.muhammedelsami.storepilot.engine.config.OnUnsupported`.
+`io.github.muhammedelsami.storepilot.api.ArtifactType`, `io.github.muhammedelsami.storepilot.api.ReleaseStatus`,
+and `io.github.muhammedelsami.storepilot.engine.config.OnUnsupported`.
 
 ### 5.3 DSL rules
 
@@ -464,7 +465,7 @@ Play: `inAppUpdatePriority`, `changesNotSentForReview`).
 - uses: actions/setup-java@v4
   with: { distribution: temurin, java-version: 17 }
 
-- uses: muhammedelsami/storepilot@v1
+- uses: muhammedelsami/storepilot@v0
   with:
     artifact: app/build/outputs/bundle/release/app-release.aab
     google-play-service-account-json: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -484,7 +485,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
-      - uses: muhammedelsami/storepilot@v1
+      - uses: muhammedelsami/storepilot@v0
         with:
           command: ${{ github.event_name == 'pull_request' && 'listing-diff' || 'listing-push' }}
           package-name: com.example.app
@@ -556,8 +557,21 @@ Secrets never appear in logs, the job summary, `--output json`, or Gradle build 
 Decided on 2026-09-28.
 
 1. **Action location.** `action.yml` is at the repo root and calls scripts in `action/`, so users
-   write `uses: muhammedelsami/storepilot@v1`.
-2. **Plugin ID.** `com.muhammedelsami.storepilot`.
+   write `uses: muhammedelsami/storepilot@v0`.
+2. **Plugin ID.** `io.github.muhammedelsami.storepilot` (changed in milestone 7 from
+   `com.muhammedelsami.storepilot`: the Plugin Portal asks for DNS proof of a custom domain, while
+   `io.github.<user>` only needs the GitHub account). The Maven group and the Kotlin packages use the
+   same namespace.
+6. **Distribution** (milestone 7). First version 0.1.0; the action's major tag is `v0`.
+   - Core modules on Maven Central: `io.github.muhammedelsami.storepilot:storepilot-core-api`,
+     `storepilot-core-engine`, and `storepilot-google-play`, with sources, an empty javadoc jar, and
+     signatures. The test fixtures (fake store) are not published.
+   - Gradle plugin on the Plugin Portal: artifact `storepilot-gradle-plugin`, which depends on the
+     core modules from Maven Central.
+   - CLI on GitHub Releases: `storepilot.jar`, `storepilot.jar.sha256`, `storepilot-<version>.zip`.
+   - Action on GitHub Marketplace, listed from the release page. GitHub advises a repository with only
+     the action's files; if the monorepo is not accepted, the action still works with `uses:`.
+   - Release process: `RELEASING.md`.
 3. **Minimum versions.** Gradle 8.10+, AGP 8.5+, JDK 17.
    - All modules compile to JVM 17 bytecode.
    - Code that runs inside Gradle uses the Kotlin stdlib that Gradle embeds (Kotlin 1.9.24 in
@@ -587,8 +601,8 @@ Decided on 2026-09-28.
 4. Listing: `pull`, `push`, `validate`, `diff` in core + CLI.
 5. Gradle plugin on top of core; `samples/android-gradle`.
 6. GitHub Action + `samples/github-workflow`.
-7. First public release (Plugin Portal, GitHub Release, Marketplace). The GitHub Release carries
-   `storepilot.jar` and `storepilot.jar.sha256`, and the release commit sets `action/cli-version`.
+7. First public release 0.1.0 (Maven Central, Plugin Portal, GitHub Release, Marketplace):
+   §9 decision 6 and `RELEASING.md`.
 8. Machine translation (§4.1).
 9. Screenshot generation (§4.2).
 10. Second store adapter.

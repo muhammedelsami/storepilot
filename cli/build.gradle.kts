@@ -14,7 +14,7 @@ dependencies {
 
 application {
     applicationName = "storepilot"
-    mainClass = "com.muhammedelsami.storepilot.cli.MainKt"
+    mainClass = "io.github.muhammedelsami.storepilot.cli.MainKt"
 }
 
 // build/libs/storepilot.jar: the CLI with every dependency, run with `java -jar`. The GitHub Action

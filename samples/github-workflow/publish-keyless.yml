@@ -31,7 +31,7 @@ jobs:
           service_account: play-publisher@example-project.iam.gserviceaccount.com
 
       - name: Publish to Google Play
-        uses: muhammedelsami/storepilot@v1
+        uses: muhammedelsami/storepilot@v0
         with:
           artifact: app/build/outputs/bundle/release/*.aab
           metadata-dir: app/store
