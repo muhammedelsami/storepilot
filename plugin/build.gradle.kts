@@ -1,8 +1,12 @@
+import org.gradle.plugin.compatibility.compatibility
+
 plugins {
     id("storepilot.embedded-kotlin")
     id("storepilot.published")
     `java-gradle-plugin`
-    alias(libs.plugins.plugin.publish)
+    id("com.gradle.plugin-publish")
+    // Adds compatibility { } to plugin declarations; the Plugin Portal shows it.
+    id("org.gradle.plugin-compatibility")
 }
 
 // Lowest Gradle version the plugin supports. The functional tests run against it and the current one.
@@ -30,6 +34,12 @@ gradlePlugin {
             description = "Publishes Android releases and Google Play store listings from files in the repository, " +
                 "and checks listings against the store's rules."
             tags = listOf("android", "google-play", "play-store", "publishing", "store-listing", "aso")
+            // The functional tests run every task type with the configuration cache.
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
         }
     }
 }

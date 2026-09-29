@@ -14,7 +14,10 @@ Repository secrets (Settings → Secrets and variables → Actions):
 | `SIGNING_KEY`, `SIGNING_KEY_PASSWORD` | An ASCII-armored GPG private key and its passphrase. Upload the public key to `keys.openpgp.org`, because Central checks signatures against public key servers. |
 | `GRADLE_PUBLISH_KEY`, `GRADLE_PUBLISH_SECRET` | API keys of the [Gradle Plugin Portal](https://plugins.gradle.org) account (sign in with GitHub). |
 
-GitHub Marketplace needs two-factor authentication on the account that publishes the release.
+GitHub Marketplace needs two-factor authentication on the account that publishes the release. The
+`name` in `action.yml` must not match any Marketplace action, GitHub user, or organization; plain
+"StorePilot" is an organization, so the action is "StorePilot Android Publisher". Marketplace reads
+`action.yml` at the release tag, so a rename needs a new release.
 
 ## Releasing version X.Y.Z
 
