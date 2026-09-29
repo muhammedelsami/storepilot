@@ -20,7 +20,7 @@ jobs:
 
       # No network and no credentials: fails the pull request when the listing breaks a store rule.
       - name: Validate the listing
-        uses: muhammedelsami/storepilot@v1
+        uses: muhammedelsami/storepilot@v0
         with:
           command: listing-validate
           metadata-dir: app/store
@@ -28,7 +28,7 @@ jobs:
       # Pull requests from forks get no secrets, so the diff only runs for branches of this repository.
       - name: Show what would change
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: muhammedelsami/storepilot@v1
+        uses: muhammedelsami/storepilot@v0
         with:
           command: listing-diff
           metadata-dir: app/store
@@ -37,7 +37,7 @@ jobs:
 
       - name: Push the listing
         if: github.event_name == 'push'
-        uses: muhammedelsami/storepilot@v1
+        uses: muhammedelsami/storepilot@v0
         with:
           command: listing-push
           metadata-dir: app/store

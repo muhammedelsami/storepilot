@@ -1,0 +1,27 @@
+# When a release is published, moves the major tag (v0 for 0.x.y) to it, so that
+# `uses: muhammedelsami/storepilot@v0` gets the newest release of that major version.
+name: Major tag
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  move:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Move the major tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Not a version tag: $TAG"; exit 1; }
+          major="${TAG%%.*}"
+          git fetch --tags --force
+          git tag --force "$major" "$TAG"
+          git push --force origin "refs/tags/$major"

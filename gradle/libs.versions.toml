@@ -7,8 +7,10 @@ google-androidpublisher = "v3-rev20260917-2.0.0"
 google-api-client = "2.9.1"
 google-auth = "1.53.0"
 kotlin = "2.3.0"
+plugin-publish = "2.2.1"
 shadow = "9.6.1"
 snakeyaml-engine = "3.1.1"
+vanniktech-maven-publish = "0.37.0"
 
 [libraries]
 agp-api = { module = "com.android.tools.build:gradle-api", version.ref = "agp-min" }
@@ -17,7 +19,9 @@ google-androidpublisher = { module = "com.google.apis:google-api-services-androi
 google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }
 google-auth = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "google-auth" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+vanniktech-maven-publish = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "vanniktech-maven-publish" }
 snakeyaml-engine = { module = "org.snakeyaml:snakeyaml-engine", version.ref = "snakeyaml-engine" }
 
 [plugins]
+plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

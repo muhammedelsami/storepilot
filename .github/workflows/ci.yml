@@ -81,6 +81,9 @@ jobs:
         with:
           command: listing-validate
           metadata-dir: samples/android-gradle/app/store
+          # Between a release commit and its published release, action/cli-version names a version
+          # that cannot be downloaded yet.
+          version: source
 
       - name: Check the action output
         shell: bash
